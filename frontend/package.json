@@ -1,0 +1,42 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "dev:debug": "nuxt dev --config nuxt.config.debug.ts",
+    "dev:minimal": "nuxt dev --config nuxt.config.minimal.ts",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@pinia/nuxt": "^0.11.2",
+    "@vueuse/core": "^13.6.0",
+    "@vueuse/nuxt": "^13.6.0",
+    "better-sqlite3": "^12.2.0",
+    "nuxt": "^4.0.1",
+    "nuxt-auth-utils": "^0.5.22",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.18",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@nuxt/typescript-build": "^3.0.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/ui": "^3.2.4",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^18.0.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.0.5"
+  }
+}

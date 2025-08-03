@@ -1,0 +1,58 @@
+import { setUserSession } from "#auth-utils/server";
+
+/**
+ * Server-side login handler
+ * Proxies authentication requests to Laravel backend and manages user sessions
+ */
+export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
+  const body = await readBody(event);
+
+  try {
+    // Make request to Laravel backend
+    const response = await $fetch<{
+      user: any;
+      token: string;
+    }>("/auth/login", {
+      baseURL: config.public.apiBase,
+      method: "POST",
+      body,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    });
+
+    // Set user session using nuxt-auth-utils
+    await setUserSession(event, {
+      user: response.user,
+      token: response.token,
+      loggedInAt: new Date().toISOString(),
+    });
+
+    return response;
+  } catch (error: any) {
+    console.error("Login error:", error);
+
+    // Return appropriate error response
+    if (error.status === 401) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: "Invalid credentials",
+      });
+    }
+
+    if (error.status === 422) {
+      throw createError({
+        statusCode: 422,
+        statusMessage: "Validation failed",
+        data: error.data,
+      });
+    }
+
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Authentication service unavailable",
+    });
+  }
+});

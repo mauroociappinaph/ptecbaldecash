@@ -1,0 +1,122 @@
+# Multi-stage build for production
+FROM php:8.2-fpm as base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    sqlite3 \
+    libsqlite3-dev \
+    nginx \
+    supervisor \
+    && docker-php-ext-configure zip \
+    && docker-php-ext-install pdo_mysql pdo_sqlite mbstring exif pcntl bcmath gd zip opcache
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Configure PHP for production
+RUN echo 'opcache.enable=1\n\
+opcache.enable_cli=1\n\
+opcache.memory_consumption=128\n\
+opcache.interned_strings_buffer=8\n\
+opcache.max_accelerated_files=4000\n\
+opcache.revalidate_freq=2\n\
+opcache.fast_shutdown=1' > /usr/local/etc/php/conf.d/opcache.ini
+
+# Configure PHP settings
+RUN echo 'memory_limit=256M\n\
+upload_max_filesize=20M\n\
+post_max_size=20M\n\
+max_execution_time=300\n\
+max_input_vars=3000' > /usr/local/etc/php/conf.d/custom.ini
+
+# Build stage
+FROM base as build
+
+WORKDIR /var/www/html
+
+# Copy composer files
+COPY composer.json composer.lock ./
+
+# Install PHP dependencies (production only)
+RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
+
+# Copy application files
+COPY . .
+
+# Run composer scripts
+RUN composer dump-autoload --optimize
+
+# Production stage
+FROM base as production
+
+WORKDIR /var/www/html
+
+# Copy built application from build stage
+COPY --from=build /var/www/html /var/www/html
+
+# Configure Nginx
+COPY docker/nginx.conf /etc/nginx/sites-available/default
+RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
+# Configure Supervisor
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html \
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/bootstrap/cache
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Wait for database\n\
+echo "Waiting for database..."\n\
+while ! nc -z database 3306; do\n\
+    sleep 1\n\
+done\n\
+\n\
+# Generate application key if not exists\n\
+if [ ! -f .env ]; then\n\
+    cp .env.example .env\n\
+fi\n\
+\n\
+if ! grep -q "APP_KEY=base64:" .env; then\n\
+    php artisan key:generate --force\n\
+fi\n\
+\n\
+# Run migrations\n\
+php artisan migrate --force\n\
+\n\
+# Cache everything for production\n\
+php artisan config:cache\n\
+php artisan route:cache\n\
+php artisan view:cache\n\
+php artisan event:cache\n\
+\n\
+# Start supervisor\n\
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf' > /usr/local/bin/start.sh
+
+RUN chmod +x /usr/local/bin/start.sh
+
+# Install netcat
+RUN apt-get update && apt-get install -y netcat-traditional
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Expose port 80
+EXPOSE 80
+
+# Start the application
+CMD ["/usr/local/bin/start.sh"]

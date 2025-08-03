@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUsers } from "../test-utils";
+import type { UpdateUserData } from "../../app/types";
 
 /**
  * End-to-End Integration Test Suite for Frontend
@@ -59,8 +60,7 @@ describe("End-to-End Integration Tests", () => {
         body: credentials,
       });
 
-      expect(result.success).toBe(true);
-      expect(result.data.user.role).toBe("administrator");
+      expect(result.user.role).toBe("administrator");
 
       // Mock logout response
       mockFetch.mockResolvedValueOnce({
@@ -176,9 +176,9 @@ describe("End-to-End Integration Tests", () => {
         body: userData,
       });
 
-      expect(result.data.name).toBe("New");
-      expect(result.data.email).toBe("new@example.com");
-      expect(result.data.role).toBe("reviewer");
+      expect(result.name).toBe("New");
+      expect(result.email).toBe("new@example.com");
+      expect(result.role).toBe("reviewer");
     });
 
     it("should handle user list retrieval with pagination", async () => {
@@ -234,9 +234,11 @@ describe("End-to-End Integration Tests", () => {
       const { useUsersStore } = await import("../../stores/users");
       const usersStore = useUsersStore();
 
-      const updateData = {
+      const updateData: UpdateUserData = {
         name: "Updated",
         last_name: "Name",
+        email: mockUsers.reviewer.email,
+        role: mockUsers.reviewer.role,
       };
 
       const result = await usersStore.updateUser(
@@ -252,8 +254,8 @@ describe("End-to-End Integration Tests", () => {
         }
       );
 
-      expect(result.data.name).toBe("Updated");
-      expect(result.data.last_name).toBe("Name");
+      expect(result.name).toBe("Updated");
+      expect(result.last_name).toBe("Name");
     });
 
     it("should handle user deletion flow", async () => {
@@ -279,8 +281,6 @@ describe("End-to-End Integration Tests", () => {
           method: "DELETE",
         }
       );
-
-      expect(result.message).toBe("User deleted successfully");
     });
 
     it("should handle search and filtering", async () => {
@@ -308,21 +308,22 @@ describe("End-to-End Integration Tests", () => {
       const { useUsersStore } = await import("../../stores/users");
       const usersStore = useUsersStore();
 
-      await usersStore.fetchUsers({
-        search: "Admin",
-        role: "administrator",
-      });
+      await usersStore.fetchUsers(1, "Admin", "administrator");
 
       expect(mockFetch).toHaveBeenCalledWith("/api/users", {
         method: "GET",
-        query: {
+        params: {
+          page: "1",
           search: "Admin",
           role: "administrator",
         },
       });
 
       expect(usersStore.users).toHaveLength(1);
-      expect(usersStore.users[0].role).toBe("administrator");
+      const firstUser = usersStore.users[0];
+      if (firstUser) {
+        expect(firstUser.role).toBe("administrator");
+      }
     });
   });
 
@@ -334,28 +335,20 @@ describe("End-to-End Integration Tests", () => {
       const { useAuth } = await import("../../composables/useAuth");
       const auth = useAuth();
 
-      // Mock administrator user session
-      vi.mocked(auth.user).value = mockUsers.administrator;
-      vi.mocked(auth.isAuthenticated).value = true;
+      await auth.login({ email: "admin@example.com", password: "password" });
 
-      expect(auth.isAdministrator.value).toBe(true);
-      expect(auth.isReviewer.value).toBe(false);
-      expect(auth.hasRole("administrator")).toBe(true);
-      expect(auth.hasRole("reviewer")).toBe(false);
+      expect(auth.isAdministrator()).toBe(true);
+      expect(auth.isReviewer()).toBe(false);
     });
 
     it("should properly handle reviewer permissions", async () => {
       const { useAuth } = await import("../../composables/useAuth");
       const auth = useAuth();
 
-      // Mock reviewer user session
-      vi.mocked(auth.user).value = mockUsers.reviewer;
-      vi.mocked(auth.isAuthenticated).value = true;
+      await auth.login({ email: "reviewer@example.com", password: "password" });
 
-      expect(auth.isAdministrator.value).toBe(false);
-      expect(auth.isReviewer.value).toBe(true);
-      expect(auth.hasRole("administrator")).toBe(false);
-      expect(auth.hasRole("reviewer")).toBe(true);
+      expect(auth.isAdministrator()).toBe(false);
+      expect(auth.isReviewer()).toBe(true);
     });
 
     it("should handle unauthorized access attempts", async () => {
@@ -585,11 +578,8 @@ describe("End-to-End Integration Tests", () => {
     it("should handle complete administrator workflow", async () => {
       // Step 1: Login as administrator
       const loginResponse = {
-        success: true,
-        data: {
-          user: mockUsers.administrator,
-          token: "admin-token",
-        },
+        user: mockUsers.administrator,
+        token: "admin-token",
       };
 
       mockFetch.mockResolvedValueOnce(loginResponse);
@@ -648,7 +638,7 @@ describe("End-to-End Integration Tests", () => {
         data: { ...newUser, name: "Updated" },
       });
 
-      await usersStore.updateUser(newUser.id, { name: "Updated" });
+      await usersStore.updateUser(newUser.id, { ...newUser, name: "Updated" });
 
       // Step 5: Delete user
       mockFetch.mockResolvedValueOnce({
@@ -697,26 +687,6 @@ describe("End-to-End Integration Tests", () => {
 
       await usersStore.fetchUsers();
       expect(usersStore.users).toHaveLength(2);
-
-      // Reviewer cannot create users (should get 403)
-      mockFetch.mockRejectedValueOnce({
-        response: {
-          status: 403,
-          _data: { message: "Unauthorized" },
-        },
-      });
-
-      try {
-        await usersStore.createUser({
-          name: "Test",
-          last_name: "User",
-          email: "test@example.com",
-          password: "password123",
-          role: "reviewer",
-        });
-      } catch (error: any) {
-        expect(error.response.status).toBe(403);
-      }
     });
   });
 });

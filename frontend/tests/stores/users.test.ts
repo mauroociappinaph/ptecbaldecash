@@ -1,9 +1,18 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUsers } from "../test-utils";
+import type { User } from "../../app/types/index";
 
 // Mock the store
-const mockStore = {
+const mockStore: {
+  users: User[];
+  loading: boolean;
+  error: string | null;
+  fetchUsers: ReturnType<typeof vi.fn>;
+  createUser: ReturnType<typeof vi.fn>;
+  updateUser: ReturnType<typeof vi.fn>;
+  deleteUser: ReturnType<typeof vi.fn>;
+} = {
   users: [],
   loading: false,
   error: null,

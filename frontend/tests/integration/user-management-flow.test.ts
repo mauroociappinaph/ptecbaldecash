@@ -97,7 +97,7 @@ describe("User Management Flow Integration", () => {
   it("should handle authentication flow", async () => {
     const mockAuth = {
       user: { value: null },
-      isAuthenticated: { value: false },
+      loggedIn: { value: false },
       login: vi.fn().mockResolvedValue({
         user: mockUsers.administrator,
         token: "mock-token",
@@ -105,7 +105,7 @@ describe("User Management Flow Integration", () => {
     };
 
     // Initially not authenticated
-    expect(mockAuth.isAuthenticated.value).toBe(false);
+    expect(mockAuth.loggedIn.value).toBe(false);
     expect(mockAuth.user.value).toBeNull();
 
     // Login
@@ -152,21 +152,21 @@ describe("User Management Flow Integration", () => {
     // Test error handling for create
     try {
       await mockUsersStore.createUser({});
-    } catch (error) {
+    } catch (error: any) {
       expect(error.message).toBe("Validation failed");
     }
 
     // Test error handling for update
     try {
       await mockUsersStore.updateUser(1, {});
-    } catch (error) {
+    } catch (error: any) {
       expect(error.message).toBe("User not found");
     }
 
     // Test error handling for delete
     try {
       await mockUsersStore.deleteUser(1);
-    } catch (error) {
+    } catch (error: any) {
       expect(error.message).toBe("Cannot delete user");
     }
   });

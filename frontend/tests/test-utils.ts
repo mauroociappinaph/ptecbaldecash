@@ -88,9 +88,9 @@ export const createMockRouter = () => ({
 });
 
 // Helper to create mock auth composable
-export const createMockAuth = (user: any = null, isAuthenticated = false) => ({
+export const createMockAuth = (user: any = null, loggedIn = false) => ({
   user: ref(user),
-  isAuthenticated: ref(isAuthenticated),
+  loggedIn: ref(loggedIn),
   login: vi.fn(),
   logout: vi.fn(),
   isAdministrator: computed(() => user?.role === "administrator"),

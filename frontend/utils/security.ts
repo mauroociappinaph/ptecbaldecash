@@ -185,8 +185,13 @@ export const createRateLimiter = (maxRequests: number, windowMs: number) => {
       const now = Date.now();
 
       // Remove old requests outside the window
-      while (requests.length > 0 && requests[0] <= now - windowMs) {
-        requests.shift();
+      while (requests.length > 0) {
+        const first = requests[0];
+        if (typeof first === "number" && first <= now - windowMs) {
+          requests.shift();
+        } else {
+          break;
+        }
       }
 
       // Check if we can make a new request
@@ -202,19 +207,24 @@ export const createRateLimiter = (maxRequests: number, windowMs: number) => {
       const now = Date.now();
 
       // Remove old requests outside the window
-      while (requests.length > 0 && requests[0] <= now - windowMs) {
-        requests.shift();
+      while (requests.length > 0) {
+        const first = requests[0];
+        if (typeof first === "number" && first <= now - windowMs) {
+          requests.shift();
+        } else {
+          break;
+        }
       }
 
       return Math.max(0, maxRequests - requests.length);
     },
 
     getResetTime(): number {
-      if (requests.length === 0) {
-        return 0;
+      const first = requests[0];
+      if (typeof first === "number") {
+        return first + windowMs;
       }
-
-      return requests[0] + windowMs;
+      return 0;
     },
   };
 };

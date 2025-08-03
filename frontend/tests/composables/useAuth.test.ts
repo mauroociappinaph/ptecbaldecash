@@ -15,7 +15,7 @@ describe("useAuth composable", () => {
     const mockAuth = createMockAuth(mockUsers.administrator, true);
 
     expect(mockAuth.user.value).toEqual(mockUsers.administrator);
-    expect(mockAuth.isAuthenticated.value).toBe(true);
+    expect(mockAuth.loggedIn.value).toBe(true);
   });
 
   it("should identify administrator role correctly", () => {
@@ -36,7 +36,7 @@ describe("useAuth composable", () => {
     const mockAuth = createMockAuth(null, false);
 
     expect(mockAuth.user.value).toBeNull();
-    expect(mockAuth.isAuthenticated.value).toBe(false);
+    expect(mockAuth.loggedIn.value).toBe(false);
     expect(mockAuth.isAdministrator.value).toBe(false);
     expect(mockAuth.isReviewer.value).toBe(false);
   });

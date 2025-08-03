@@ -180,7 +180,7 @@ describe("UI Components", () => {
     it("renders different sizes", () => {
       const wrapper = mount(Loading, {
         props: {
-          size: "large",
+          size: "lg",
         },
         global: {
           plugins: [pinia],

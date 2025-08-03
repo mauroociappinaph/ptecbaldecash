@@ -69,10 +69,12 @@ describe("EditUserModal", () => {
     const emailInput = wrapper.find('input[id="email"]');
     const roleSelect = wrapper.find('select[id="role"]');
 
-    expect(nameInput.element.value).toBe("Reviewer");
-    expect(lastNameInput.element.value).toBe("User");
-    expect(emailInput.element.value).toBe("reviewer@example.com");
-    expect(roleSelect.element.value).toBe("reviewer");
+    expect((nameInput.element as HTMLInputElement).value).toBe("Reviewer");
+    expect((lastNameInput.element as HTMLInputElement).value).toBe("User");
+    expect((emailInput.element as HTMLInputElement).value).toBe(
+      "reviewer@example.com"
+    );
+    expect((roleSelect.element as HTMLSelectElement).value).toBe("reviewer");
   });
 
   it("emits close event when cancel button is clicked", async () => {
@@ -98,7 +100,7 @@ describe("EditUserModal", () => {
     const passwordInput = wrapper.find('input[id="password"]');
     expect(passwordInput.exists()).toBe(true);
     expect(passwordInput.attributes("required")).toBeUndefined();
-    expect(passwordInput.element.value).toBe("");
+    expect((passwordInput.element as HTMLInputElement).value).toBe("");
   });
 
   it("allows updating user data", async () => {
@@ -112,7 +114,7 @@ describe("EditUserModal", () => {
     const nameInput = wrapper.find('input[id="name"]');
     await nameInput.setValue("Updated Name");
 
-    expect(nameInput.element.value).toBe("Updated Name");
+    expect((nameInput.element as HTMLInputElement).value).toBe("Updated Name");
   });
 
   it("validates required fields", () => {

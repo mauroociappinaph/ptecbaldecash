@@ -89,7 +89,7 @@ describe("UserList", () => {
       await searchInput.trigger("input");
 
       // The component should filter results
-      expect(searchInput.element.value).toBe("admin");
+      expect((searchInput.element as HTMLInputElement).value).toBe("admin");
     }
   });
 
@@ -101,7 +101,9 @@ describe("UserList", () => {
       await roleFilter.setValue("administrator");
 
       // The component should filter by role
-      expect(roleFilter.element.value).toBe("administrator");
+      expect((roleFilter.element as HTMLSelectElement).value).toBe(
+        "administrator"
+      );
     }
   });
 });

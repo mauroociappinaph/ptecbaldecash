@@ -55,7 +55,9 @@ describe("LoginForm", () => {
     const emailInput = wrapper.find('input[type="email"]');
     await emailInput.setValue("test@example.com");
 
-    expect(emailInput.element.value).toBe("test@example.com");
+    expect((emailInput.element as HTMLInputElement).value).toBe(
+      "test@example.com"
+    );
   });
 
   it("allows input in password field", async () => {
@@ -64,7 +66,7 @@ describe("LoginForm", () => {
     const passwordInput = wrapper.find('input[type="password"]');
     await passwordInput.setValue("password123");
 
-    expect(passwordInput.element.value).toBe("password123");
+    expect((passwordInput.element as HTMLInputElement).value).toBe("password123");
   });
 
   it("shows loading state when submitting", () => {

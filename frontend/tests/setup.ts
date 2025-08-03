@@ -1,29 +1,40 @@
 import { config } from "@vue/test-utils";
 import { afterEach, beforeEach, vi } from "vitest";
-import { onUnmounted } from "vue"; // Add this import
+import type { useUserSession as originalUseUserSession } from "~/composables/useUserSession";
+
+// Define the type for the user session
+type UserSession = ReturnType<typeof originalUseUserSession>;
 
 // Configure Vue Test Utils globally
 config.global.mocks = {
   $t: (key: string) => key, // Mock i18n if needed later
 };
 
-// Mock Vue composables
-vi.mock("vue", async () => {
-  const actual = await vi.importActual("vue");
-  return {
-    ...actual,
-    ref: vi.fn((value) => ({ value })),
-    reactive: vi.fn((value) => value),
-    computed: vi.fn((fn) => ({ value: fn() })),
-    watch: vi.fn(),
-    watchEffect: vi.fn(),
-    onMounted: vi.fn(),
-    onUnmounted: vi.fn(),
-    readonly: vi.fn((value) => value),
-  };
-});
-
 // Mock Nuxt composables
+vi.mock("~/composables/useApi", () => ({
+  useApi: vi.fn(() => ({
+    get: vi.fn(() => Promise.resolve({})),
+    post: vi.fn(() => Promise.resolve({})),
+    put: vi.fn(() => Promise.resolve({})),
+    del: vi.fn(() => Promise.resolve({})),
+    testConnection: vi.fn(() => Promise.resolve({})),
+    apiBase: "http://localhost:8000/api",
+    API_ENDPOINTS: {
+      AUTH: {
+        LOGIN: "/auth/login",
+        LOGOUT: "/auth/logout",
+      },
+      USERS: {
+        LIST: "/users",
+        CREATE: "/users",
+        UPDATE: (id: number) => `/users/${id}`,
+        DELETE: (id: number) => `/users/${id}`,
+      },
+      HEALTH: "/health",
+    },
+  })),
+}));
+
 vi.mock("#app", () => ({
   useRuntimeConfig: () => ({
     public: {
@@ -49,21 +60,81 @@ vi.mock("#app", () => ({
 }));
 
 // Mock Nuxt Auth Utils
-vi.mock("nuxt-auth-utils", () => ({
-  useUserSession: () => ({
-    data: { value: null },
-    refresh: vi.fn(),
-  }),
-  setUserSession: vi.fn(),
-  clearUserSession: vi.fn(),
-}));
+vi.mock("nuxt-auth-utils", async () => {
+  const actual = await vi.importActual("nuxt-auth-utils");
+
+  const loggedIn = ref(false);
+  const mockSession: UserSession = {
+    user: ref(null),
+    loggedIn: computed(() => loggedIn.value),
+    clear: vi.fn(),
+    fetch: vi.fn(),
+  };
+
+  return {
+    ...actual,
+    useUserSession: vi.fn(() => ({ ...mockSession, loggedIn })),
+    setUserSession: vi.fn(),
+    clearUserSession: vi.fn(),
+  };
+});
+
+import { mockUsers } from "./test-utils";
+import type { AuthUser } from "~/types";
+
+vi.mock("~/composables/useAuth", () => {
+  const user = ref<AuthUser | null>(null);
+  const loggedIn = computed(() => !!user.value);
+
+  return {
+    useAuth: vi.fn(() => ({
+      user,
+      loggedIn,
+      isLoading: ref(false),
+      error: ref(null),
+      login: vi.fn(async (credentials) => {
+        if (credentials.email === "admin@example.com") {
+          user.value = mockUsers.administrator;
+          return { user: mockUsers.administrator, token: "admin-token" };
+        } else if (credentials.email === "reviewer@example.com") {
+          user.value = mockUsers.reviewer;
+          return { user: mockUsers.reviewer, token: "reviewer-token" };
+        } else {
+          throw new Error("Invalid credentials");
+        }
+      }),
+      logout: vi.fn(async () => {
+        user.value = null;
+      }),
+      refreshSession: vi.fn(),
+      clearError: vi.fn(),
+      hasRole: vi.fn((role: string) => user.value?.role === role),
+      isAdministrator: vi.fn(() => user.value?.role === "administrator"),
+      isReviewer: vi.fn(() => user.value?.role === "reviewer"),
+      canManageUsers: vi.fn(() => user.value?.role === "administrator"),
+      isReadOnly: vi.fn(() => user.value?.role === "reviewer"),
+      getCurrentUser: vi.fn(() => user.value),
+    })),
+  };
+});
 
 // Mock Pinia stores
-vi.mock("pinia", () => ({
-  defineStore: vi.fn(),
-  createPinia: vi.fn(),
-  setActivePinia: vi.fn(),
-}));
+vi.mock("pinia", async () => {
+  const actual = await vi.importActual("pinia");
+  return {
+    ...actual,
+    defineStore: vi.fn((name, options) => {
+      const store = {
+        ...options.state(),
+        ...options.actions,
+        ...options.getters,
+      };
+      return vi.fn(() => store);
+    }),
+    createPinia: vi.fn(() => ({ use: vi.fn() })),
+    setActivePinia: vi.fn(),
+  };
+});
 
 // Setup and teardown for each test
 beforeEach(() => {

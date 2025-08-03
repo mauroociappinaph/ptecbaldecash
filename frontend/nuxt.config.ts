@@ -183,9 +183,10 @@ export default defineNuxtConfig({
   },
 
   // Configure auto-imports for composables
-  components: {
-    dirs: ["~/components"],
-  },
+  components: [
+    { path: "~/components", pathPrefix: false },
+    { path: "~/components/UI", pathPrefix: false },
+  ],
 
   // Configure path aliases for better module resolution
   alias: {

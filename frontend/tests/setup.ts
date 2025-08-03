@@ -1,9 +1,7 @@
 import { config } from "@vue/test-utils";
 import { afterEach, beforeEach, vi } from "vitest";
-import type { useUserSession as originalUseUserSession } from "~/composables/useUserSession";
 
-// Define the type for the user session
-type UserSession = ReturnType<typeof originalUseUserSession>;
+
 
 // Configure Vue Test Utils globally
 config.global.mocks = {
@@ -62,18 +60,17 @@ vi.mock("#app", () => ({
 // Mock Nuxt Auth Utils
 vi.mock("nuxt-auth-utils", async () => {
   const actual = await vi.importActual("nuxt-auth-utils");
-
-  const loggedIn = ref(false);
-  const mockSession: UserSession = {
-    user: ref(null),
-    loggedIn: computed(() => loggedIn.value),
-    clear: vi.fn(),
-    fetch: vi.fn(),
-  };
+  const user = ref(null);
+  const loggedIn = computed(() => !!user.value);
 
   return {
     ...actual,
-    useUserSession: vi.fn(() => ({ ...mockSession, loggedIn })),
+    useUserSession: vi.fn(() => ({
+      user,
+      loggedIn,
+      clear: vi.fn(),
+      fetch: vi.fn(),
+    })),
     setUserSession: vi.fn(),
     clearUserSession: vi.fn(),
   };

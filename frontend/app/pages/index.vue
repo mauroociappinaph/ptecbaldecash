@@ -14,18 +14,8 @@
         >
           Login
         </NuxtLink>
-        <NuxtLink
-          to="/simple"
-          class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        >
-          Simple Test
-        </NuxtLink>
-        <NuxtLink
-          to="/test"
-          class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        >
-          Test Page
-        </NuxtLink>
+        
+        
       </div>
     </div>
   </div>

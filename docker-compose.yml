@@ -1,0 +1,103 @@
+version: "3.8"
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: user-management-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=mysql
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_DATABASE=user_management
+      - DB_USERNAME=user_management
+      - DB_PASSWORD=password
+      - MAIL_MAILER=log
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./backend:/var/www/html
+      - backend_storage:/var/www/html/storage
+    depends_on:
+      - database
+    networks:
+      - user-management-network
+    command: php artisan serve --host=0.0.0.0 --port=8000
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: user-management-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NUXT_PUBLIC_API_BASE=http://localhost:8000/api
+      - NUXT_DEVTOOLS_ENABLED=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - user-management-network
+    command: npm run dev
+
+  # Database Service
+  database:
+    image: mysql:8.0
+    container_name: user-management-database
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: user_management
+      MYSQL_USER: user_management
+      MYSQL_PASSWORD: password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - user-management-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis Service (Optional - for caching and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: user-management-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - user-management-network
+    command: redis-server --appendonly yes
+
+  # Mailhog Service (Development email testing)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: user-management-mailhog
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI port
+    networks:
+      - user-management-network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_storage:
+    driver: local
+
+networks:
+  user-management-network:
+    driver: bridge

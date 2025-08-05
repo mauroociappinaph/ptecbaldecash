@@ -48,11 +48,10 @@ class UserController extends Controller
                 'total_users' => $users->total()
             ]);
 
-            return (new UserCollection($users))
-                ->additional([
-                    'success' => true,
-                    'message' => 'Users retrieved successfully'
-                ]);
+            return $this->successResponse(
+                new UserCollection($users),
+                'Users retrieved successfully'
+            );
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve users', [

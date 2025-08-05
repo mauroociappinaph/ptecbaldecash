@@ -1,20 +1,34 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
 import LoginForm from "../../components/Auth/LoginForm.vue";
 
-// Mock the composables
-vi.mock("../../composables/useAuth", () => ({
-  useAuth: () => ({
-    login: vi.fn(),
-    loading: { value: false },
-    error: { value: null },
-  }),
-}));
-
 describe("LoginForm", () => {
+  let mockAuth: any;
+
   beforeEach(() => {
     setActivePinia(createPinia());
+
+    // Create fresh mock for each test
+    mockAuth = {
+      login: vi.fn(),
+      isLoading: ref(false),
+      error: ref(null),
+      clearError: vi.fn(),
+    };
+
+    // Mock useAuth globally
+    global.useAuth = vi.fn().mockReturnValue(mockAuth);
+
+    // Mock useRouter
+    global.useRouter = vi.fn().mockReturnValue({
+      push: vi.fn(),
+      replace: vi.fn(),
+      go: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+    });
   });
 
   it("renders login form correctly", () => {
@@ -46,7 +60,7 @@ describe("LoginForm", () => {
     const wrapper = mount(LoginForm);
 
     const submitButton = wrapper.find('button[type="submit"]');
-    expect(submitButton.text()).toContain("Sign In");
+    expect(submitButton.text()).toContain("Sign in");
   });
 
   it("allows input in email field", async () => {
@@ -70,12 +84,8 @@ describe("LoginForm", () => {
   });
 
   it("shows loading state when submitting", () => {
-    // Mock loading state
-    vi.mocked(require("../../composables/useAuth").useAuth).mockReturnValue({
-      login: vi.fn(),
-      loading: { value: true },
-      error: { value: null },
-    });
+    // Set loading state
+    mockAuth.isLoading.value = true;
 
     const wrapper = mount(LoginForm);
     const submitButton = wrapper.find('button[type="submit"]');
@@ -84,27 +94,18 @@ describe("LoginForm", () => {
   });
 
   it("displays error messages", () => {
-    // Mock error state
-    vi.mocked(require("../../composables/useAuth").useAuth).mockReturnValue({
-      login: vi.fn(),
-      loading: { value: false },
-      error: { value: "Invalid credentials" },
-    });
+    // Set error state
+    mockAuth.error.value = "Invalid credentials";
 
     const wrapper = mount(LoginForm);
     expect(wrapper.text()).toContain("Invalid credentials");
   });
 
   it("prevents form submission when loading", () => {
-    // Mock loading state
-    vi.mocked(require("../../composables/useAuth").useAuth).mockReturnValue({
-      login: vi.fn(),
-      loading: { value: true },
-      error: { value: null },
-    });
+    // Set loading state
+    mockAuth.isLoading.value = true;
 
     const wrapper = mount(LoginForm);
-    const form = wrapper.find("form");
     const submitButton = wrapper.find('button[type="submit"]');
 
     expect(submitButton.attributes("disabled")).toBeDefined();

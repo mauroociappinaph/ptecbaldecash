@@ -1,24 +1,31 @@
-# Use Node.js 18 Alpine
-FROM node:18-alpine
+# Use consistent Node.js version
+FROM node:20-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies and netcat in one layer
 RUN apk add --no-cache \
     git \
     python3 \
     make \
-    g++
+    g++ \
+    curl \
+    netcat-openbsd
 
-# Copy package files
-COPY package*.json ./
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nuxt -u 1001 -G nodejs
 
-# Install dependencies
-RUN npm ci
+# Copy package files first for better layer caching
+COPY --chown=nuxt:nodejs package*.json ./
+
+# Install dependencies as non-root user
+USER nuxt
+RUN npm ci --only=production && npm cache clean --force
 
 # Copy application files
-COPY . .
+COPY --chown=nuxt:nodejs . .
 
 # Create startup script for development
 RUN echo '#!/bin/sh\n\

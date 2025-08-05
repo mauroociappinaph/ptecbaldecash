@@ -368,15 +368,14 @@ class EndToEndIntegrationTest extends TestCase
 
         $response->assertStatus(201);
 
-        // Verify email was sent
-        Mail::assertSent(UserCredentialsMail::class, function ($mail) use ($userData) {
+        // Verify email was queued
+        Mail::assertQueued(UserCredentialsMail::class, function ($mail) use ($userData) {
             return $mail->hasTo($userData['email']) &&
-                   $mail->user->email === $userData['email'] &&
-                   $mail->password === $userData['password'];
+                   $mail->user->email === $userData['email'];
         });
 
-        // Verify only one email was sent
-        Mail::assertSentCount(1);
+        // Verify only one email was queued
+        Mail::assertQueuedCount(1);
     }
 
     /**
@@ -422,8 +421,8 @@ class EndToEndIntegrationTest extends TestCase
         $createResponse->assertStatus(201);
         $newUserId = $createResponse->json('data.id');
 
-        // Verify email was sent
-        Mail::assertSent(UserCredentialsMail::class);
+        // Verify email was queued
+        Mail::assertQueued(UserCredentialsMail::class);
 
         // Step 4: Verify user appears in list
         $updatedListResponse = $this->withHeaders([

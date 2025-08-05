@@ -11,7 +11,7 @@ class UpdateUserRequest extends BaseUserRequest
      */
     public function rules(): array
     {
-        $userId = $this->route('user');
+        $userId = $this->route('id');
 
         return [
             'name' => $this->getNameRules(false),

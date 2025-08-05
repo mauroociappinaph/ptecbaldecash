@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
             'sanitize.input' => \App\Http\Middleware\SanitizeInput::class,
+            'performance' => \App\Http\Middleware\PerformanceMiddleware::class,
         ]);
 
         // Apply security headers to all requests
@@ -30,6 +31,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Apply input sanitization to API requests
         $middleware->appendToGroup('api', \App\Http\Middleware\SanitizeInput::class);
+
+        // Add performance monitoring to API requests in debug mode
+        if (config('app.debug')) {
+            $middleware->appendToGroup('api', \App\Http\Middleware\PerformanceMiddleware::class);
+        }
 
         // Configure rate limiting for API routes
         $middleware->throttleApi();

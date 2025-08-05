@@ -1,49 +1,30 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 z-50 overflow-y-auto"
-    :aria-labelledby="titleId"
-    role="dialog"
-    aria-modal="true"
-  >
+  <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto" :aria-labelledby="titleId" role="dialog"
+    aria-modal="true">
     <!-- Background overlay -->
-    <div
-      class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0"
-    >
-      <div
-        class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-        aria-hidden="true"
-        @click="handleOverlayClick"
-      ></div>
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"
+        @click="handleOverlayClick"></div>
 
       <!-- Modal panel -->
-      <div
-        :class="[
-          'inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle',
-          sizeClasses,
-        ]"
-      >
+      <div :class="[
+        'inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle',
+        sizeClasses,
+      ]">
         <!-- Header -->
         <div v-if="showHeader" class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="sm:flex sm:items-start">
             <!-- Icon -->
-            <div
-              v-if="icon"
-              :class="[
-                'mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10',
-                iconClasses,
-              ]"
-            >
+            <div v-if="icon" :class="[
+              'mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10',
+              iconClasses,
+            ]">
               <component :is="icon" class="h-6 w-6" />
             </div>
 
             <!-- Title and description -->
             <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-              <h3
-                v-if="title"
-                :id="titleId"
-                class="text-lg leading-6 font-medium text-gray-900"
-              >
+              <h3 v-if="title" :id="titleId" class="text-lg leading-6 font-medium text-gray-900">
                 {{ title }}
               </h3>
               <p v-if="description" class="mt-2 text-sm text-gray-500">
@@ -52,19 +33,13 @@
             </div>
 
             <!-- Close button -->
-            <button
-              v-if="showCloseButton"
-              @click="handleClose"
-              :disabled="loading"
+            <button v-if="showCloseButton" @click="handleClose" :disabled="loading"
               class="ml-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-600 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Close modal"
-            >
+              aria-label="Close modal">
               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
+                <path fill-rule="evenodd"
                   d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clip-rule="evenodd"
-                />
+                  clip-rule="evenodd" />
               </svg>
             </button>
           </div>
@@ -76,10 +51,7 @@
         </div>
 
         <!-- Footer -->
-        <div
-          v-if="showFooter"
-          class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse"
-        >
+        <div v-if="showFooter" class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
           <slot name="footer" />
         </div>
       </div>
@@ -88,6 +60,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, onUnmounted } from "vue";
+
 interface Props {
   isOpen: boolean;
   title?: string;

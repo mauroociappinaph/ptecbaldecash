@@ -56,7 +56,7 @@ class UserRequestValidationTest extends TestCase
     {
         $request = new UpdateUserRequest();
         $request->setUserResolver(fn() => $this->administrator);
-        $request->setRouteResolver(fn() => \Tests\Support\MockRoute::withUser($userId));
+        $request->setRouteResolver(fn() => \Tests\Support\MockRoute::withId($userId));
         return $request;
     }
 
@@ -145,8 +145,8 @@ class UserRequestValidationTest extends TestCase
 
         // Test strong password
         $validator = Validator::make(array_merge($baseData, [
-            'password' => 'Password123!',
-            'password_confirmation' => 'Password123!'
+            'password' => 'StrongTestPass123!',
+            'password_confirmation' => 'StrongTestPass123!'
         ]), $request->rules());
         $this->assertFalse($validator->fails());
     }
@@ -163,7 +163,7 @@ class UserRequestValidationTest extends TestCase
             'name' => 'John',
             'last_name' => 'Doe',
             'email' => 'test@example.com',
-            'password' => 'Password123!',
+            'password' => 'TestPassword123!',
             'password_confirmation' => 'DifferentPassword123!',
             'role' => 'administrator'
         ];
@@ -189,13 +189,13 @@ class UserRequestValidationTest extends TestCase
             'name' => 'John',
             'last_name' => 'Doe',
             'email' => 'deleted@example.com', // Should be allowed since original is soft deleted
-            'password' => 'Password123!',
-            'password_confirmation' => 'Password123!',
+            'password' => 'UniqueTestPass123!',
+            'password_confirmation' => 'UniqueTestPass123!',
             'role' => 'administrator'
         ];
 
         $validator = Validator::make($data, $request->rules());
-        $this->assertFalse($validator->fails());
+        $this->assertFalse($validator->fails(), 'Validation should pass for soft deleted email but failed with errors: ' . json_encode($validator->errors()->toArray()));
     }
 
     /** @test */
@@ -227,7 +227,7 @@ class UserRequestValidationTest extends TestCase
 
         $request = new UpdateUserRequest();
         $request->setUserResolver(fn() => $this->administrator);
-        $request->setRouteResolver(fn() => \Tests\Support\MockRoute::withUser($user1->id));
+        $request->setRouteResolver(fn() => \Tests\Support\MockRoute::withId($user1->id));
 
         // Should allow keeping same email
         $validator = Validator::make(['email' => 'user1@example.com'], $request->rules());
@@ -247,14 +247,14 @@ class UserRequestValidationTest extends TestCase
         $request = $this->createUpdateRequest(1);
 
         // Should fail if password provided without confirmation
-        $validator = Validator::make(['password' => 'NewPassword123!'], $request->rules());
+        $validator = Validator::make(['password' => 'NewUniquePassword123!'], $request->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('password_confirmation', $validator->errors()->toArray());
 
         // Should pass if both password and confirmation provided
         $validator = Validator::make([
-            'password' => 'NewPassword123!',
-            'password_confirmation' => 'NewPassword123!'
+            'password' => 'NewUniquePassword123!',
+            'password_confirmation' => 'NewUniquePassword123!'
         ], $request->rules());
         $this->assertFalse($validator->fails());
 
@@ -275,8 +275,8 @@ class UserRequestValidationTest extends TestCase
             'name' => 'John',
             'last_name' => 'Doe',
             'email' => 'test@example.com',
-            'password' => 'Password123!',
-            'password_confirmation' => 'Password123!'
+            'password' => 'UniqueRoleTestPass123!',
+            'password_confirmation' => 'UniqueRoleTestPass123!'
         ];
 
         // Test valid roles

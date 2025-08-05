@@ -29,15 +29,17 @@ class UserCredentialsMail extends Mailable implements ShouldQueue
      * Create a new user credentials email message.
      *
      * @param User $user The user receiving the credentials
-     * @param string $password The plain text password to send
+     * @param string|null $password The plain text password to send
      *
      * @throws InvalidArgumentException If password is invalid
      */
     public function __construct(
         public User $user,
-        private string $password
+        private ?string $password
     ) {
         $this->validatePassword($password);
+        // Store the validated password
+        $this->password = $password;
     }
 
     /**
@@ -47,8 +49,8 @@ class UserCredentialsMail extends Mailable implements ShouldQueue
     {
         return new Envelope(
             subject: config('mail.subjects.user_credentials', 'Welcome to User Management System - Your Account Credentials'),
-            from: config('mail.from.address'),
-            replyTo: config('mail.reply_to.address', config('mail.from.address')),
+            from: config('mail.from.address', 'noreply@example.com'),
+            replyTo: config('mail.reply_to.address', config('mail.from.address', 'noreply@example.com')),
         );
     }
 
@@ -79,12 +81,12 @@ class UserCredentialsMail extends Mailable implements ShouldQueue
     /**
      * Validate the password meets minimum requirements.
      *
-     * @param string $password
+     * @param string|null $password
      * @throws InvalidArgumentException
      */
-    private function validatePassword(string $password): void
+    private function validatePassword(?string $password): void
     {
-        if (empty($password)) {
+        if ($password === null || trim($password) === '') {
             throw new InvalidArgumentException('Password cannot be empty');
         }
 

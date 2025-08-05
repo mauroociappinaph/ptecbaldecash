@@ -23,6 +23,18 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+        $this->configurePerformanceMonitoring();
+    }
+
+    /**
+     * Configure performance monitoring.
+     */
+    protected function configurePerformanceMonitoring(): void
+    {
+        // Enable query monitoring in debug mode
+        if (config('app.debug')) {
+            \App\Helpers\PerformanceHelper::monitorQueries();
+        }
     }
 
     /**

@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "name": "Code Quality Analyzer",
+  "description": "Monitors source code files for changes and analyzes modified code for potential improvements, including code smells, design patterns, and best practices. Generates suggestions for improving code quality while maintaining existing functionality.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.js",
+      "**/*.ts",
+      "**/*.jsx",
+      "**/*.tsx",
+      "**/*.py",
+      "**/*.java",
+      "**/*.cpp",
+      "**/*.c",
+      "**/*.cs",
+      "**/*.go",
+      "**/*.rs",
+      "**/*.php",
+      "**/*.rb",
+      "**/*.swift",
+      "**/*.kt"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the modified code in the changed files for potential improvements. Focus on:\n\n1. Code smells and anti-patterns\n2. Opportunities to apply better design patterns\n3. Best practices for the specific programming language\n4. Readability improvements (naming, structure, comments)\n5. Maintainability enhancements (modularity, coupling, cohesion)\n6. Performance optimizations (algorithmic efficiency, resource usage)\n\nFor each suggestion:\n- Explain the current issue or improvement opportunity\n- Provide the recommended solution with code examples if applicable\n- Explain why this change would improve the code\n- Ensure the suggestion maintains existing functionality\n\nPresent your analysis in a clear, actionable format that helps developers understand and implement the improvements."
+  }
+}

@@ -11,6 +11,10 @@ class UserFactoryTest extends TestCase
 {
     use RefreshDatabase;
 
+    
+
+    
+
     public function test_factory_creates_user_with_required_fields()
     {
         $user = User::factory()->make();

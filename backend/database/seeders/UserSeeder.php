@@ -30,9 +30,11 @@ class UserSeeder extends Seeder
         ]);
 
         // Create 98 additional users with balanced role distribution
+        // This will create approximately 78 reviewers and 20 administrators
         User::factory()
             ->count(98)
-            ->balancedRoles()
+            ->balancedRoles() // Uses default 4:1 ratio
+            ->withCorporateEmails()
             ->create();
     }
 }

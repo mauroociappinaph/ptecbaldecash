@@ -105,7 +105,7 @@
             <tr>
               <th
                 v-for="column in columns"
-                :key="column.key"
+                :key="String(column.key)"
                 scope="col"
                 :class="[
                   'px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider',
@@ -119,11 +119,11 @@
                 <div
                   v-if="column.sortable"
                   class="flex items-center cursor-pointer hover:text-gray-700"
-                  @click="handleSort(column.key)"
+                  @click="handleSort(String(column.key))"
                 >
                   <span>{{ column.label }}</span>
                   <svg
-                    v-if="sortBy === column.key"
+                    v-if="sortBy === String(column.key)"
                     :class="[
                       'ml-1 h-4 w-4',
                       sortOrder === 'asc' ? 'transform rotate-180' : '',
@@ -172,7 +172,7 @@
             >
               <td
                 v-for="column in columns"
-                :key="column.key"
+                :key="String(column.key)"
                 :class="[
                   'px-6 py-4 whitespace-nowrap text-sm',
                   column.align === 'center'
@@ -183,9 +183,9 @@
                 ]"
               >
                 <slot
-                  :name="`cell-${column.key}`"
+                  :name="`cell-${String(column.key)}`"
                   :item="item"
-                  :value="getNestedValue(item, column.key)"
+                  :value="getNestedValue(item, String(column.key))"
                   :index="index"
                 >
                   {{ formatCellValue(item, column) }}
@@ -208,17 +208,18 @@
 </template>
 
 <script setup lang="ts">
-interface Column {
-  key: string;
+interface Column<T = any> {
+  key: keyof T | string;
   label: string;
   sortable?: boolean;
   align?: "left" | "center" | "right";
-  formatter?: (value: any, item: any) => string;
+  formatter?: (value: unknown, item: T) => string;
+  className?: string;
 }
 
-interface Props {
-  data: any[];
-  columns: Column[];
+interface Props<T = any> {
+  data: T[];
+  columns: Column<T>[];
   loading?: boolean;
   error?: string | null;
   title?: string;
@@ -232,7 +233,7 @@ interface Props {
   striped?: boolean;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
-  rowKey?: string | ((item: any, index: number) => string | number);
+  rowKey?: string | ((item: T, index: number) => string | number);
 }
 
 interface Emits {
@@ -271,14 +272,21 @@ const getRowKey = (item: any, index: number): string | number => {
   return item.id || index;
 };
 
-// Get nested object value
-const getNestedValue = (obj: any, path: string): any => {
-  return path.split(".").reduce((current, key) => current?.[key], obj);
-};
+// Memoized nested value getter for better performance
+const getNestedValue = useMemoize((obj: any, path: string): any => {
+  // Fast path for simple keys
+  if (!path.includes(".")) {
+    return obj?.[path];
+  }
+
+  // Split and reduce for nested paths
+  const keys = path.split(".");
+  return keys.reduce((current, key) => current?.[key], obj);
+});
 
 // Format cell value
 const formatCellValue = (item: any, column: Column): string => {
-  const value = getNestedValue(item, column.key);
+  const value = getNestedValue(item, String(column.key));
 
   if (column.formatter) {
     return column.formatter(value, item);
@@ -292,9 +300,10 @@ const formatCellValue = (item: any, column: Column): string => {
 };
 
 // Handle sorting
-const handleSort = (columnKey: string) => {
+const handleSort = (columnKey: keyof any | string) => {
+  const keyString = String(columnKey);
   const newOrder =
-    props.sortBy === columnKey && props.sortOrder === "asc" ? "desc" : "asc";
-  emit("sort", columnKey, newOrder);
+    props.sortBy === keyString && props.sortOrder === "asc" ? "desc" : "asc";
+  emit("sort", keyString, newOrder);
 };
 </script>

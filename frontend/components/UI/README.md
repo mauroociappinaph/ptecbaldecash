@@ -137,7 +137,46 @@ A versatile button component with multiple variants, sizes, and states. Supports
 
 ### Table
 
-A comprehensive table component with sorting, pagination, and customizable cells.
+A comprehensive table component with sorting, pagination, and customizable cells. Features TypeScript type safety with proper column key handling and slot name generation.
+
+**Props:**
+
+- `data` (Array, required): Array of data objects to display
+- `columns` (Array, required): Column configuration objects
+- `loading` (boolean): Show loading state, defaults to false
+- `error` (string | null): Error message to display
+- `title` (string): Table title
+- `description` (string): Table description
+- `showHeader` (boolean): Show table header section, defaults to true
+- `showRetry` (boolean): Show retry button on error, defaults to true
+- `loadingText` (string): Loading message text
+- `emptyTitle` (string): Empty state title
+- `emptyDescription` (string): Empty state description
+- `hoverable` (boolean): Enable row hover effects, defaults to true
+- `striped` (boolean): Enable alternating row colors, defaults to false
+- `sortBy` (string): Current sort column
+- `sortOrder` ("asc" | "desc"): Current sort order
+- `rowKey` (string | Function): Row key for v-for optimization
+
+**Column Configuration:**
+
+```typescript
+interface Column<T = any> {
+  key: keyof T | string;
+  label: string;
+  sortable?: boolean;
+  align?: "left" | "center" | "right";
+  formatter?: (value: unknown, item: T) => string;
+  className?: string;
+}
+```
+
+**Events:**
+
+- `@sort`: Emitted when column header is clicked for sorting
+- `@retry`: Emitted when retry button is clicked
+
+**Usage Examples:**
 
 ```vue
 <template>
@@ -148,6 +187,8 @@ A comprehensive table component with sorting, pagination, and customizable cells
     :error="error"
     title="Users"
     description="Manage system users"
+    :sort-by="sortBy"
+    :sort-order="sortOrder"
     @sort="handleSort"
     @retry="fetchUsers"
   >
@@ -155,11 +196,33 @@ A comprehensive table component with sorting, pagination, and customizable cells
       <Button variant="primary" @click="createUser"> Create User </Button>
     </template>
 
-    <template #cell-actions="{ item }">
+    <template #cell-actions="{ item, index }">
       <Button size="sm" variant="ghost" @click="editUser(item)"> Edit </Button>
       <Button size="sm" variant="danger" @click="deleteUser(item)">
         Delete
       </Button>
+    </template>
+
+    <template #cell-status="{ value, item }">
+      <span
+        :class="[
+          'px-2 py-1 rounded-full text-xs',
+          value === 'active'
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800',
+        ]"
+      >
+        {{ value }}
+      </span>
+    </template>
+
+    <template #empty>
+      <div class="text-center py-8">
+        <p class="text-gray-500">No users found</p>
+        <Button variant="primary" @click="createUser" class="mt-4">
+          Create First User
+        </Button>
+      </div>
     </template>
   </Table>
 </template>
@@ -167,13 +230,37 @@ A comprehensive table component with sorting, pagination, and customizable cells
 <script setup>
 const columns = [
   { key: "id", label: "ID", sortable: true },
-  { key: "name", label: "Name", sortable: true },
+  { key: "first_name", label: "First Name", sortable: true },
+  { key: "last_name", label: "Last Name", sortable: true },
   { key: "email", label: "Email", sortable: true },
-  { key: "role", label: "Role" },
+  { key: "role", label: "Role", sortable: true },
+  { key: "status", label: "Status", align: "center" },
   { key: "actions", label: "Actions", align: "right" },
 ];
+
+const sortBy = ref("created_at");
+const sortOrder = ref("desc");
+
+const handleSort = (column: string, order: "asc" | "desc") => {
+  sortBy.value = column;
+  sortOrder.value = order;
+  // Fetch sorted data
+};
 </script>
 ```
+
+**Features:**
+
+- **Type Safety**: Full TypeScript support with proper column key handling and string conversion
+- **Sorting**: Click column headers to sort data with visual indicators
+- **Loading States**: Built-in loading spinner and skeleton states
+- **Error Handling**: Error display with retry functionality
+- **Empty States**: Customizable empty state with slot support
+- **Responsive Design**: Horizontal scrolling on mobile devices
+- **Accessibility**: Proper ARIA attributes and keyboard navigation
+- **Customizable Cells**: Use slots to customize individual cell rendering
+- **Row Styling**: Configurable hover effects and striped rows
+- **Performance**: Optimized with memoized value getters and proper key handling
 
 ### Loading
 
@@ -214,6 +301,64 @@ An error display component with retry functionality and collapsible details.
 </template>
 ```
 
+### ErrorBoundary
+
+A comprehensive error boundary component that catches and handles errors gracefully throughout the application.
+
+**Props:**
+
+- `fallbackTitle` (string): Custom error title, defaults to "Something went wrong"
+- `fallbackMessage` (string): Custom error message with user-friendly text
+- `showDetails` (boolean): Show detailed error information (recommended for development only)
+- `showReportButton` (boolean): Display error reporting button
+- `onRetry` (Function): Custom retry function
+- `onReport` (Function): Custom error reporting function
+
+**Events:**
+
+- `@error`: Emitted when an error is caught
+- `@retry`: Emitted when retry button is clicked
+
+**Features:**
+
+- **Global Error Catching**: Automatically catches unhandled errors and promise rejections
+- **Enhanced Error Handling**: Works seamlessly with the new API error class hierarchy (`ApiError`, `ValidationError`, `NetworkError`)
+- **Performance Monitoring**: Integrates with performance monitoring to log memory usage during errors
+- **Modern Browser Support**: Uses `import.meta.client` for better Nuxt 3 compatibility
+- **Graceful Fallback**: Continues to function even if performance monitoring is unavailable
+- **User-Friendly Interface**: Provides clear error messages and recovery options
+- **Accessibility**: Proper focus management and keyboard navigation support
+- **Error Type Recognition**: Automatically provides appropriate error messages based on error type (network errors, validation errors, etc.)
+
+```vue
+<template>
+  <ErrorBoundary
+    :show-details="isDevelopment"
+    :show-report-button="true"
+    fallback-title="Application Error"
+    fallback-message="An unexpected error occurred. Please try refreshing the page."
+    @error="handleError"
+    @retry="handleRetry"
+  >
+    <YourApplicationContent />
+  </ErrorBoundary>
+</template>
+
+<script setup>
+const isDevelopment = process.env.NODE_ENV === "development";
+
+const handleError = (error) => {
+  console.error("Application error:", error);
+  // Send to error reporting service
+};
+
+const handleRetry = () => {
+  // Custom retry logic
+  window.location.reload();
+};
+</script>
+```
+
 ## Usage Guidelines
 
 1. **Import components**: Use the index file for easy importing:
@@ -225,6 +370,7 @@ An error display component with retry functionality and collapsible details.
      Table,
      Loading,
      Error,
+     ErrorBoundary,
      Toast,
    } from "~/components/UI";
    ```

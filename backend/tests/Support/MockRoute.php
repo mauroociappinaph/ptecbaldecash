@@ -21,6 +21,11 @@ class MockRoute
         return new self(['user' => $userId]);
     }
 
+    public static function withId(int $id): self
+    {
+        return new self(['id' => $id]);
+    }
+
     public static function empty(): self
     {
         return new self();

@@ -1,7 +1,20 @@
 import { config } from "@vue/test-utils";
 import { afterEach, beforeEach, vi } from "vitest";
 
+// Configure Vue Test Utils globally
+config.global.config = {
+  globalProperties: {},
+};
 
+// Mock usePerformance globally
+vi.mock("~/composables/usePerformance", () => ({
+  usePerformance: vi.fn(() => ({
+    startMeasure: vi.fn(),
+    endMeasure: vi.fn(),
+    logMemoryUsage: vi.fn(),
+    monitorRender: vi.fn(),
+  })),
+}));
 
 // Configure Vue Test Utils globally
 config.global.mocks = {
@@ -59,15 +72,13 @@ vi.mock("#app", () => ({
 
 // Mock Nuxt Auth Utils
 vi.mock("nuxt-auth-utils", async () => {
+  const { ref } = await import("vue");
   const actual = await vi.importActual("nuxt-auth-utils");
-  const user = ref(null);
-  const loggedIn = computed(() => !!user.value);
-
   return {
     ...actual,
     useUserSession: vi.fn(() => ({
-      user,
-      loggedIn,
+      user: ref(null),
+      loggedIn: ref(false),
       clear: vi.fn(),
       fetch: vi.fn(),
     })),
@@ -76,51 +87,20 @@ vi.mock("nuxt-auth-utils", async () => {
   };
 });
 
-import { mockUsers } from "./test-utils";
-import type { AuthUser } from "~/types";
+// Import mock factories
+import { assignGlobalMocks } from './mocks/factories';
 
-vi.mock("~/composables/useAuth", () => {
-  const user = ref<AuthUser | null>(null);
-  const loggedIn = computed(() => !!user.value);
+// Assign global mocks using factory functions
+assignGlobalMocks();
 
-  return {
-    useAuth: vi.fn(() => ({
-      user,
-      loggedIn,
-      isLoading: ref(false),
-      error: ref(null),
-      login: vi.fn(async (credentials) => {
-        if (credentials.email === "admin@example.com") {
-          user.value = mockUsers.administrator;
-          return { user: mockUsers.administrator, token: "admin-token" };
-        } else if (credentials.email === "reviewer@example.com") {
-          user.value = mockUsers.reviewer;
-          return { user: mockUsers.reviewer, token: "reviewer-token" };
-        } else {
-          throw new Error("Invalid credentials");
-        }
-      }),
-      logout: vi.fn(async () => {
-        user.value = null;
-      }),
-      refreshSession: vi.fn(),
-      clearError: vi.fn(),
-      hasRole: vi.fn((role: string) => user.value?.role === role),
-      isAdministrator: vi.fn(() => user.value?.role === "administrator"),
-      isReviewer: vi.fn(() => user.value?.role === "reviewer"),
-      canManageUsers: vi.fn(() => user.value?.role === "administrator"),
-      isReadOnly: vi.fn(() => user.value?.role === "reviewer"),
-      getCurrentUser: vi.fn(() => user.value),
-    })),
-  };
-});
+// Global mocks are now handled by the factory functions
 
 // Mock Pinia stores
 vi.mock("pinia", async () => {
   const actual = await vi.importActual("pinia");
   return {
     ...actual,
-    defineStore: vi.fn((name, options) => {
+    defineStore: vi.fn((_name, options) => {
       const store = {
         ...options.state(),
         ...options.actions,

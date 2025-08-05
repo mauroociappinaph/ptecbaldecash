@@ -1,80 +1,79 @@
 /**
- * API caching composable with improved memory management and error handling
- * Provides request caching to reduce API calls and improve performance
+ * API caching composable for improved performance
  */
 
-interface CacheEntry<T> {
+interface CacheEntry<T = any> {
   data: T;
   timestamp: number;
   ttl: number;
-  accessCount: number;
-  lastAccessed: number;
+  lastAccessed: number; // For LRU eviction
 }
 
-interface CacheStats {
-  size: number;
-  hitRate: number;
-  totalRequests: number;
-  cacheHits: number;
+interface CacheOptions {
+  ttl?: number; // Time to live in milliseconds
+  key?: string; // Custom cache key
+  force?: boolean; // Force refresh cache
 }
 
-export const useApiCache = () => {
-  const cache = new Map<string, CacheEntry<any>>();
-  const MAX_CACHE_SIZE = 100; // Prevent memory leaks
+export const useApiCache = (maxSize: number = 100) => {
+  const cache = new Map<string, CacheEntry>();
   const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
-
-  // Cache statistics for monitoring
-  let totalRequests = 0;
-  let cacheHits = 0;
 
   /**
    * Generate cache key from URL and params
    */
   const generateKey = (url: string, params?: Record<string, any>): string => {
     const paramString = params ? JSON.stringify(params) : "";
-    return `${url}${paramString}`;
+    return `${url}:${paramString}`;
   };
 
   /**
    * Check if cache entry is valid
    */
-  const isValid = <T>(entry: CacheEntry<T>): boolean => {
+  const isValid = (entry: CacheEntry): boolean => {
     return Date.now() - entry.timestamp < entry.ttl;
   };
 
   /**
-   * Get cached data if valid
+   * Get data from cache with LRU tracking
    */
   const get = <T>(key: string): T | null => {
-    totalRequests++;
-    const entry = cache.get(key) as CacheEntry<T> | undefined;
+    const entry = cache.get(key);
 
-    if (entry && isValid(entry)) {
-      // Update access statistics
-      entry.accessCount++;
-      entry.lastAccessed = Date.now();
-      cacheHits++;
-      return entry.data;
+    if (!entry) {
+      return null;
     }
 
-    // Remove expired entry
-    if (entry) {
+    if (!isValid(entry)) {
       cache.delete(key);
+      return null;
     }
 
-    return null;
+    // Update last accessed for LRU
+    entry.lastAccessed = Date.now();
+    return entry.data as T;
   };
 
   /**
-   * Set cache entry with LRU eviction
+   * Set data in cache with LRU eviction
    */
   const set = <T>(key: string, data: T, ttl: number = DEFAULT_TTL): void => {
-    // Clean up expired entries first
-    cleanupExpiredEntries();
+    // Implement LRU eviction when cache is full
+    if (cache.size >= maxSize && !cache.has(key)) {
+      // Find least recently used entry
+      let oldestKey = "";
+      let oldestTime = Date.now();
 
-    // Implement LRU eviction if cache is still full
-    if (cache.size >= MAX_CACHE_SIZE) {
-      evictLeastRecentlyUsed();
+      for (const [cacheKey, entry] of cache.entries()) {
+        if (entry.lastAccessed < oldestTime) {
+          oldestTime = entry.lastAccessed;
+          oldestKey = cacheKey;
+        }
+      }
+
+      if (oldestKey) {
+        cache.delete(oldestKey);
+      }
     }
 
     const now = Date.now();
@@ -82,63 +81,22 @@ export const useApiCache = () => {
       data,
       timestamp: now,
       ttl,
-      accessCount: 0,
       lastAccessed: now,
     });
   };
 
   /**
-   * Clean up expired entries to free memory
+   * Clear cache entry
    */
-  const cleanupExpiredEntries = (): void => {
-    const now = Date.now();
-    for (const [key, entry] of cache.entries()) {
-      if (now - entry.timestamp >= entry.ttl) {
-        cache.delete(key);
-      }
-    }
+  const clear = (key: string): void => {
+    cache.delete(key);
   };
 
   /**
-   * Evict least recently used entry
+   * Clear all cache entries
    */
-  const evictLeastRecentlyUsed = (): void => {
-    let lruKey = "";
-    let oldestAccess = Date.now();
-
-    for (const [k, entry] of cache.entries()) {
-      if (entry.lastAccessed < oldestAccess) {
-        oldestAccess = entry.lastAccessed;
-        lruKey = k;
-      }
-    }
-
-    if (lruKey) {
-      cache.delete(lruKey);
-    }
-  };
-
-  /**
-   * Get cache statistics
-   */
-  const getStats = (): CacheStats => {
-    return {
-      size: cache.size,
-      hitRate: totalRequests > 0 ? (cacheHits / totalRequests) * 100 : 0,
-      totalRequests,
-      cacheHits,
-    };
-  };
-
-  /**
-   * Clear cache entry or all cache
-   */
-  const clear = (key?: string): void => {
-    if (key) {
-      cache.delete(key);
-    } else {
-      cache.clear();
-    }
+  const clearAll = (): void => {
+    cache.clear();
   };
 
   /**
@@ -146,44 +104,139 @@ export const useApiCache = () => {
    */
   const cachedRequest = async <T>(
     url: string,
-    options: {
-      params?: Record<string, any>;
-      ttl?: number;
-      force?: boolean;
-      fetcher?: (url: string) => Promise<T>;
-    } = {}
+    requestFn: () => Promise<T>,
+    options: CacheOptions = {}
   ): Promise<T> => {
-    const { params, ttl = 5 * 60 * 1000, force = false, fetcher } = options;
-    const key = generateKey(url, params);
+    const { ttl = DEFAULT_TTL, key, force = false } = options;
+    const cacheKey = key || generateKey(url);
 
     // Return cached data if available and not forced refresh
     if (!force) {
-      const cached = get<T>(key);
-      if (cached) {
-        return cached;
+      const cachedData = get<T>(cacheKey);
+      if (cachedData !== null) {
+        return cachedData;
       }
     }
 
-    // Use provided fetcher or default $fetch
-    if (!fetcher) {
-      throw new Error("Fetcher function is required for cachedRequest");
-    }
-
-    const queryString = params ? `?${new URLSearchParams(params)}` : "";
-    const data = await fetcher(`${url}${queryString}`);
+    // Fetch fresh data
+    const data = await requestFn();
 
     // Cache the result
-    set(key, data, ttl);
+    set(cacheKey, data, ttl);
 
     return data;
+  };
+
+  /**
+   * Cached fetch with automatic key generation
+   */
+  const cachedFetch = async <T>(
+    url: string,
+    options: CacheOptions & Record<string, any> = {}
+  ): Promise<T> => {
+    const { ttl, key, force, ...fetchOptions } = options;
+
+    return cachedRequest(
+      url,
+      async () => {
+        const response = await $fetch<T>(url, fetchOptions);
+        return response;
+      },
+      {
+        ttl,
+        key,
+        force,
+      }
+    );
+  };
+
+  /**
+   * Get cache statistics
+   */
+  const getStats = () => {
+    const entries = Array.from(cache.entries());
+    const validEntries = entries.filter(([, entry]) => isValid(entry));
+    const expiredEntries = entries.filter(([, entry]) => !isValid(entry));
+
+    return {
+      total: entries.length,
+      valid: validEntries.length,
+      expired: expiredEntries.length,
+      size: cache.size,
+    };
+  };
+
+  /**
+   * Clean expired entries
+   */
+  const cleanup = (): number => {
+    const entries = Array.from(cache.entries());
+    let cleaned = 0;
+
+    entries.forEach(([key, entry]) => {
+      if (!isValid(entry)) {
+        cache.delete(key);
+        cleaned++;
+      }
+    });
+
+    return cleaned;
+  };
+
+  // Automatic cleanup every 10 minutes
+  if (import.meta.client) {
+    setInterval(cleanup, 10 * 60 * 1000);
+  }
+
+  // Unified caching interface
+  const cached = {
+    request: async <T>(
+      key: string,
+      requestFn: () => Promise<T>,
+      options: CacheOptions = {}
+    ): Promise<T> => {
+      const { ttl = DEFAULT_TTL, force = false } = options;
+
+      if (!force) {
+        const cachedData = get<T>(key);
+        if (cachedData !== null) {
+          return cachedData;
+        }
+      }
+
+      try {
+        const data = await requestFn();
+        set(key, data, ttl);
+        return data;
+      } catch (error) {
+        console.error(`Cache request failed for key: ${key}`, error);
+        throw error;
+      }
+    },
+
+    fetch: async <T>(
+      url: string,
+      options: CacheOptions & Record<string, any> = {}
+    ): Promise<T> => {
+      const { ttl, key, force, ...fetchOptions } = options;
+      const cacheKey = key || generateKey(url, fetchOptions);
+
+      return cached.request(cacheKey, () => $fetch<T>(url, fetchOptions), {
+        ttl,
+        force,
+      });
+    },
   };
 
   return {
     get,
     set,
     clear,
-    generateKey,
+    clearAll,
+    cached,
     cachedRequest,
+    cachedFetch,
     getStats,
+    cleanup,
   };
 };

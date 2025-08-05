@@ -105,25 +105,126 @@ try {
 
 Catches and displays critical application errors that would otherwise crash the app.
 
+#### `ErrorBoundary.vue` Component
+
+A comprehensive error boundary component that provides:
+
+- **Global Error Catching**: Captures unhandled errors and promise rejections using modern `import.meta.client` checks
+- **User-Friendly Error Display**: Shows contextual error messages with retry functionality
+- **Performance Monitoring Integration**: Logs memory usage when errors occur (with graceful fallback)
+- **Retry Mechanisms**: Allows users to retry failed operations
+- **Development Support**: Shows detailed error information in development mode
+- **Accessibility**: Proper focus management and keyboard navigation
+- **Modern Browser Support**: Uses `import.meta.client` instead of deprecated `process.client` for better Nuxt 3 compatibility
+
+```vue
+<template>
+  <ErrorBoundary
+    :show-details="isDevelopment"
+    :show-report-button="true"
+    @error="handleError"
+    @retry="handleRetry"
+  >
+    <YourComponent />
+  </ErrorBoundary>
+</template>
+```
+
+The ErrorBoundary component includes enhanced error logging with performance monitoring integration. When errors occur, it attempts to log memory usage for debugging purposes, with graceful fallback handling if performance monitoring is not available. The component now uses explicit imports for the `usePerformance` composable to ensure better TypeScript support and IDE compatibility.
+
 ## API Integration
 
-The error handling system automatically integrates with API responses:
+The error handling system automatically integrates with API responses through a robust error class hierarchy:
+
+### Error Class Hierarchy
+
+The `useApi` composable now implements a proper error class hierarchy for better error handling and type safety:
+
+```typescript
+// Base API error class
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+    public data?: unknown,
+    public originalError?: unknown
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// Validation-specific error class
+class ValidationError extends ApiError {
+  constructor(
+    message: string,
+    public errors: Record<string, string[]>,
+    data?: unknown
+  ) {
+    super(422, message, data);
+    this.name = "ValidationError";
+  }
+}
+
+// Network-specific error class
+class NetworkError extends ApiError {
+  constructor(message: string = "Network error occurred") {
+    super(0, message);
+    this.name = "NetworkError";
+  }
+}
+```
 
 ### Automatic Error Handling
 
 - **401 Unauthorized**: Redirects to login page
 - **403 Forbidden**: Shows access denied message
-- **422 Validation Error**: Displays field-specific validation errors
+- **422 Validation Error**: Displays field-specific validation errors using `ValidationError` class
 - **500 Server Error**: Shows server error message
-- **Network Errors**: Shows connection error message
+- **Network Errors**: Shows connection error message using `NetworkError` class
+
+### Enhanced Error Type Detection
+
+The new error classes provide better error type detection and handling:
+
+```typescript
+try {
+  await api.createUser(userData);
+} catch (error) {
+  if (error instanceof ValidationError) {
+    // Handle validation errors with access to error.errors
+    setFormErrors(error.errors);
+  } else if (error instanceof NetworkError) {
+    // Handle network-specific errors
+    showNetworkErrorMessage();
+  } else if (error instanceof ApiError) {
+    // Handle general API errors
+    showApiErrorMessage(error.status, error.message);
+  }
+}
+```
 
 ### API Plugin Configuration
 
-The `api.client.ts` plugin automatically handles API errors and integrates with the toast system.
+The `api.client.ts` plugin automatically handles API errors and integrates with the toast system using the new error class hierarchy.
 
 ## Usage Examples
 
-### 1. Form with Error Handling
+### 1. LoginForm Component Example
+
+The `LoginForm.vue` component (`frontend/components/Auth/LoginForm.vue`) serves as a complete example of the error handling system in action:
+
+- **Form Validation**: Real-time validation with field-specific error display
+- **API Error Handling**: Comprehensive error handling for authentication failures
+- **Loading States**: Visual feedback during form submission
+- **Toast Integration**: Success and error notifications
+- **TypeScript Support**: Full type safety with proper error interfaces
+- **Reactive Error Clearing**: Automatic error clearing when form data changes using Vue's `watch` composable
+- **Component Lifecycle**: Proper error state initialization using `onMounted` hook
+
+This component is fully functional and ready for integration into the login page.
+
+### 2. Form with Error Handling
 
 ```vue
 <template>
@@ -203,24 +304,63 @@ try {
 
 ## Error Types
 
-### API Error Interface
+### API Error Classes
+
+The error handling system now uses proper error classes instead of interfaces for better runtime type checking:
 
 ```typescript
-interface ApiError extends Error {
-  readonly status: number;
-  readonly data?: unknown;
-  readonly originalError?: unknown;
-  readonly shouldRedirect?: string;
+// Base API error class
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+    public data?: unknown,
+    public originalError?: unknown
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// Validation error class with specific error structure
+class ValidationError extends ApiError {
+  constructor(
+    message: string,
+    public errors: Record<string, string[]>,
+    data?: unknown
+  ) {
+    super(422, message, data);
+    this.name = "ValidationError";
+  }
+}
+
+// Network error class for connection issues
+class NetworkError extends ApiError {
+  constructor(message: string = "Network error occurred") {
+    super(0, message);
+    this.name = "NetworkError";
+  }
 }
 ```
 
-### Validation Error
+### Error Type Checking
+
+With the new error classes, you can use `instanceof` for reliable error type checking:
 
 ```typescript
-interface ValidationError extends ApiError {
-  readonly status: 422;
-  readonly data: ValidationErrorResponse;
-  readonly errors: Record<string, string[]>;
+try {
+  const result = await api.createUser(userData);
+} catch (error) {
+  if (error instanceof ValidationError) {
+    // TypeScript knows error.errors is available
+    console.log("Validation errors:", error.errors);
+  } else if (error instanceof NetworkError) {
+    // Handle network-specific scenarios
+    console.log("Network error occurred");
+  } else if (error instanceof ApiError) {
+    // Handle general API errors
+    console.log("API error:", error.status, error.message);
+  }
 }
 ```
 
@@ -302,6 +442,28 @@ test("displays validation errors", () => {
 This error handling system provides a robust foundation for managing errors throughout the application while maintaining a consistent user experience.
 
 ## Recent Updates
+
+### API Error Handling Improvements
+
+- **Error Class Hierarchy**: Implemented proper error classes (`ApiError`, `ValidationError`, `NetworkError`) instead of interfaces for better runtime type checking and error handling
+- **Type Safety**: Enhanced TypeScript support with proper error class inheritance and `instanceof` checks
+- **Better Error Categorization**: Specific error classes for different types of API errors (validation, network, general API errors)
+- **Improved Developer Experience**: Better IntelliSense and type checking when handling different error types
+
+### ErrorBoundary Component Enhancements
+
+- **Performance Monitoring Integration**: Enhanced error logging with memory usage tracking when errors occur
+- **Graceful Fallback Handling**: Added try-catch wrapper around performance monitoring to prevent secondary errors
+- **Improved Error Context**: Better error context logging for debugging and monitoring purposes
+- **Development Safety**: Ensures error boundary functionality remains stable even when performance monitoring is unavailable
+- **Modern Browser API Support**: Updated to use `import.meta.client` instead of deprecated `process.client` for better Nuxt 3 compatibility
+- **Explicit Import Support**: Added explicit import for `usePerformance` composable to improve TypeScript support and IDE compatibility
+
+### API Cache Composable Updates
+
+- **Modern Browser API Support**: Updated `useApiCache` composable to use `import.meta.client` instead of deprecated `process.client`
+- **Improved Type Safety**: Enhanced TypeScript type definitions for better development experience
+- **Better Error Handling**: Improved async function handling in cached fetch operations
 
 ### Modal Component Improvements
 

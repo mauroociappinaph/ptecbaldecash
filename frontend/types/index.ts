@@ -119,20 +119,20 @@ export interface UserListResponse extends PaginatedResponse<User> {}
 // ============================================================================
 
 /** Standardized API error interface */
-export interface ApiError extends Error {
+export interface ApiErrorInterface extends Error {
   readonly status: number;
   readonly data?: unknown;
   readonly originalError?: unknown;
   readonly shouldRedirect?: string;
 }
 
-/** Network-specific error */
-export interface NetworkError extends ApiError {
+/** Network-specific error interface */
+export interface NetworkErrorInterface extends ApiErrorInterface {
   readonly status: 0;
 }
 
-/** Validation error with field-specific messages */
-export interface ValidationError extends ApiError {
+/** Validation error with field-specific messages interface */
+export interface ValidationErrorInterface extends ApiErrorInterface {
   readonly status: 422;
   readonly data: ValidationErrorResponse;
   readonly errors: Record<string, string[]>; // Direct access to errors for convenience
@@ -228,4 +228,5 @@ export interface TableColumn<T = unknown> {
   align?: "left" | "center" | "right";
   formatter?: (value: unknown, item: T) => string;
   width?: string;
+  className?: string;
 }

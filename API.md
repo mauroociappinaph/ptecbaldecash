@@ -265,8 +265,12 @@ Authorization: Bearer {token}
 
 ## User Roles
 
+The system uses a PHP enum (`App\Enums\UserRole`) for type-safe role management:
+
 - **administrator**: Full access to all endpoints and operations
 - **reviewer**: Read-only access to user listings
+
+**Note**: API responses return role values as strings (`"administrator"`, `"reviewer"`), but they are backed by the `UserRole` enum in the backend for type safety and consistency. The enum provides display labels via the `label()` method (e.g., "Administrator", "Reviewer") which are used in email templates and UI displays.
 
 ## Authentication
 
@@ -293,3 +297,5 @@ Tokens are obtained through the login endpoint and should be stored securely on 
 - **Error Handling**: Enhanced form error handling composable with proper HTTP status code constants and improved TypeScript type safety for better API error processing.
 - **Type Safety**: Fixed TypeScript errors in form error handling by properly importing HTTP status constants from the centralized types file.
 - **Import Fix**: Resolved missing `useToast` import in users.vue page to ensure proper toast notification functionality for user management operations.
+- **Email Template Enhancement**: Updated email template to use UserRole enum `label()` method for proper role display (e.g., "Administrator" instead of "administrator").
+- **Test Fixes**: Resolved test failures related to validation rules, route parameter handling, and password uniqueness requirements.

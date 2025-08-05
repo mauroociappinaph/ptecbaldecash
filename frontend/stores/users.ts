@@ -99,13 +99,17 @@ export const useUsersStore = defineStore("users", {
 
       try {
         const { get } = useApi();
+        const { monitorApiRequest } = usePerformance();
+
         const params = new URLSearchParams({
           page: page.toString(),
           ...(search && { search }),
           ...(role && { role }),
         });
 
-        const response = await get<UserListResponse>(`/users?${params}`);
+        const response = await monitorApiRequest(`/users?${params}`, () =>
+          get<UserListResponse>(`/users?${params}`)
+        );
 
         this.users = response.data;
         this.pagination = {

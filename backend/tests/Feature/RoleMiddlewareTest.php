@@ -18,7 +18,9 @@ class RoleMiddlewareTest extends TestCase
 
         $response->assertStatus(401)
             ->assertJson([
-                'message' => 'Unauthenticated.'
+                'success' => false,
+                'message' => 'Authentication required',
+                'error_code' => 'UNAUTHENTICATED'
             ]);
     }
 
@@ -52,7 +54,9 @@ class RoleMiddlewareTest extends TestCase
 
         $response->assertStatus(403)
             ->assertJson([
-                'message' => 'Unauthorized. You do not have permission to access this resource.'
+                'success' => false,
+                'message' => 'You do not have permission to access this resource',
+                'error_code' => 'INSUFFICIENT_PERMISSIONS'
             ]);
     }
 
@@ -101,7 +105,9 @@ class RoleMiddlewareTest extends TestCase
 
         $response->assertStatus(403)
             ->assertJson([
-                'message' => 'Unauthorized. You do not have permission to access this resource.'
+                'success' => false,
+                'message' => 'Access denied. Invalid role configuration',
+                'error_code' => 'INVALID_ROLE_CONFIG'
             ]);
     }
 

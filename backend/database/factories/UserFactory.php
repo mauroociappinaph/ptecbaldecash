@@ -19,6 +19,7 @@ class UserFactory extends Factory
 
     /**
      * Define the model's default state.
+     * Uses reviewer role by default for more predictable testing.
      *
      * @return array<string, mixed>
      */
@@ -30,7 +31,7 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
-            'role' => fake()->randomElement(UserRole::cases()),
+            'role' => UserRole::REVIEWER, // Default to reviewer for predictable testing
             'remember_token' => Str::random(10),
         ];
     }
@@ -67,28 +68,134 @@ class UserFactory extends Factory
 
     /**
      * Create users with balanced role distribution.
-     * Useful for seeding with predictable role ratios.
+     * Creates 80% reviewers and 20% administrators by default.
+     *
+     * @param int $reviewerRatio Number of reviewers per administrator (default: 4)
+     * @return static
      */
-    public function balancedRoles(): static
+    public function balancedRoles(int $reviewerRatio = 4): static
     {
-        static $counter = 0;
-        $counter++;
+        $sequence = [];
 
-        // Create 80% reviewers, 20% administrators for realistic distribution
-        $role = ($counter % 5 === 0) ? UserRole::ADMINISTRATOR : UserRole::REVIEWER;
+        // Add reviewers based on ratio
+        for ($i = 0; $i < $reviewerRatio; $i++) {
+            $sequence[] = ['role' => UserRole::REVIEWER];
+        }
 
-        return $this->state(fn (array $attributes) => [
-            'role' => $role,
-        ]);
+        // Add one administrator
+        $sequence[] = ['role' => UserRole::ADMINISTRATOR];
+
+        return $this->sequence(...$sequence);
     }
 
     /**
      * Create users with varied passwords for more realistic test data.
+     *
+     * @param int $minLength Minimum password length (default: 8)
+     * @param int $maxLength Maximum password length (default: 20)
+     * @return static
      */
-    public function withVariedPasswords(): static
+    public function withVariedPasswords(int $minLength = 8, int $maxLength = 20): static
     {
         return $this->state(fn (array $attributes) => [
-            'password' => Hash::make(fake()->password(8, 20)),
+            'password' => Hash::make(fake()->password($minLength, $maxLength)),
+        ]);
+    }
+
+    /**
+     * Create users with a specific password for testing.
+     *
+     * @param string $password Plain text password to hash
+     * @return static
+     */
+    public function withPassword(string $password): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'password' => Hash::make($password),
+        ]);
+    }
+
+    /**
+     * Create users with weak passwords for security testing.
+     *
+     * @return static
+     */
+    public function withWeakPasswords(): static
+    {
+        $weakPasswords = ['123456', 'password', 'admin', 'test', '12345678'];
+
+        return $this->state(fn (array $attributes) => [
+            'password' => Hash::make(fake()->randomElement($weakPasswords)),
+        ]);
+    }
+
+    /**
+     * Create users with realistic corporate email domains.
+     *
+     * @return static
+     */
+    public function withCorporateEmails(): static
+    {
+        $domains = ['company.com', 'corp.org', 'business.net', 'enterprise.co'];
+
+        return $this->state(fn (array $attributes) => [
+            'email' => fake()->unique()->userName() . '@' . fake()->randomElement($domains),
+        ]);
+    }
+
+    /**
+     * Create users with specific name patterns for testing search functionality.
+     *
+     * @return static
+     */
+    public function withSearchableNames(): static
+    {
+        $firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Lisa'];
+        $lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia'];
+
+        return $this->state(fn (array $attributes) => [
+            'name' => fake()->randomElement($firstNames),
+            'last_name' => fake()->randomElement($lastNames),
+        ]);
+    }
+
+    /**
+     * Create users for performance testing with minimal data.
+     *
+     * @return static
+     */
+    public function minimal(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => 'User',
+            'last_name' => fake()->numberBetween(1, 10000),
+            'email' => 'user' . fake()->unique()->numberBetween(1, 100000) . '@test.com',
+            'remember_token' => null,
+        ]);
+    }
+
+    /**
+     * Create users with soft-deleted state for testing deletion functionality.
+     *
+     * @return static
+     */
+    public function deleted(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'deleted_at' => fake()->dateTimeBetween('-1 year', 'now'),
+        ]);
+    }
+
+    /**
+     * Create users with random role distribution.
+     * Useful when you need unpredictable role assignment.
+     *
+     * @return static
+     */
+    public function withRandomRoles(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => fake()->randomElement(UserRole::cases()),
         ]);
     }
 }

@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockAuth, mockUsers } from "../test-utils";
 
-// Mock the actual composable
-vi.mock("../../composables/useAuth", () => ({
-  useAuth: vi.fn(),
-}));
-
 describe("useAuth composable", () => {
   beforeEach(() => {
     vi.clearAllMocks();

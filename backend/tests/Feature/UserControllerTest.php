@@ -95,7 +95,9 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(401)
             ->assertJson([
-                'message' => 'Unauthenticated.'
+                'success' => false,
+                'message' => 'Authentication required',
+                'error_code' => 'UNAUTHENTICATED'
             ]);
     }
 

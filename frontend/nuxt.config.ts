@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 // Configuration constants
 const CONFIG = {
   APP_NAME: "User Management System",
-  DEFAULT_API_BASE: "http://localhost:8000/api",
+
   COMPATIBILITY_DATE: "2025-07-15",
 } as const;
 
@@ -46,7 +46,14 @@ export default defineNuxtConfig({
   // Add required modules
   modules: [
     "@pinia/nuxt",
-    "@nuxtjs/tailwindcss",
+    "@nuxtjs/tailwindcss": {
+      postcss: {
+        plugins: {
+          "@tailwindcss/postcss": {},
+          autoprefixer: {},
+        },
+      },
+    },
     "@vueuse/nuxt",
     "nuxt-auth-utils",
   ],
@@ -67,12 +74,31 @@ export default defineNuxtConfig({
     },
     build: {
       target: "esnext",
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Split vendor chunks for better caching
+            'vue-vendor': ['vue', '@vue/runtime-core'],
+            'ui-vendor': ['@headlessui/vue', '@heroicons/vue'],
+            'utils-vendor': ['lodash-es', 'date-fns'],
+          },
+        },
+      },
+      // Enable minification in production
+      minify: process.env.NODE_ENV === 'production' ? 'esbuild' : false,
+      // Optimize CSS
+      cssCodeSplit: true,
     },
     vue: {
       script: {
         defineModel: true,
         propsDestructure: true,
       },
+    },
+    // Optimize dependencies
+    optimizeDeps: {
+      include: ['vue', 'pinia', '@vueuse/core'],
+      exclude: ['@nuxt/devtools'],
     },
   },
 
@@ -90,7 +116,7 @@ export default defineNuxtConfig({
 
     // Public keys (exposed to client-side)
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || CONFIG.DEFAULT_API_BASE,
+      apiBase: process.env.NUXT_PUBLIC_API_BASE,
       appName: process.env.NUXT_PUBLIC_APP_NAME || CONFIG.APP_NAME,
       // Security configuration
       enableCsrf: process.env.NUXT_PUBLIC_ENABLE_CSRF !== "false",
@@ -100,6 +126,8 @@ export default defineNuxtConfig({
 
   // Configure CSS
   css: ["~/assets/css/main.css"],
+
+
 
   // Configure server-side rendering
   ssr: true,
@@ -120,9 +148,21 @@ export default defineNuxtConfig({
   pages: true, // Explicitly enable pages directory scanning
   srcDir: "./app", // Use app directory for Nuxt 4
 
-  // Build configuration to suppress warnings
+  // Build configuration with optimizations
   build: {
     transpile: [],
+    // Enable tree shaking
+    analyze: process.env.ANALYZE === 'true',
+  },
+
+  // Optimization configuration
+  optimization: {
+    // Enable automatic code splitting
+    splitChunks: {
+      layouts: true,
+      pages: true,
+      commons: true,
+    },
   },
 
   // Build hooks for development optimizations
@@ -148,7 +188,7 @@ export default defineNuxtConfig({
         { name: "viewport", content: "width=device-width, initial-scale=1" },
         { name: "robots", content: "noindex, nofollow" }, // Prevent indexing for admin interface
         { "http-equiv": "X-Content-Type-Options", content: "nosniff" },
-        { "http-equiv": "X-Frame-Options", content: "DENY" },
+
         { "http-equiv": "X-XSS-Protection", content: "1; mode=block" },
         { name: "referrer", content: "strict-origin-when-cross-origin" },
       ],
@@ -159,7 +199,7 @@ export default defineNuxtConfig({
   nitro: {
     devProxy: {
       "/api": {
-        target: process.env.NUXT_PUBLIC_API_BASE || CONFIG.DEFAULT_API_BASE,
+        target: process.env.NUXT_PUBLIC_API_BASE,
         changeOrigin: true,
         prependPath: true,
         headers: {
@@ -186,6 +226,7 @@ export default defineNuxtConfig({
   components: [
     { path: "~/components", pathPrefix: false },
     { path: "~/components/UI", pathPrefix: false },
+    { path: "~/app/components", pathPrefix: false },
   ],
 
   // Configure path aliases for better module resolution

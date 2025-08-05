@@ -1,22 +1,13 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex items-center">
-            <h1 class="text-xl font-semibold text-gray-900">
-              User Management System
-            </h1>
-          </div>
-        </div>
-      </div>
-    </nav>
+  <div class="min-h-screen flex flex-col bg-gray-50">
+    <Navbar />
 
     <!-- Main content -->
-    <main>
+    <main class="flex-grow">
       <slot />
     </main>
+
+    <Footer />
   </div>
 </template>
 

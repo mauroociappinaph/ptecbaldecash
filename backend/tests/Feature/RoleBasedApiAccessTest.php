@@ -46,7 +46,9 @@ class RoleBasedApiAccessTest extends TestCase
 
         $response->assertStatus(403)
             ->assertJson([
-                'message' => 'Unauthorized. You do not have permission to access this resource.'
+                'success' => false,
+                'message' => 'You do not have permission to access this resource',
+                'error_code' => 'INSUFFICIENT_PERMISSIONS'
             ]);
     }
 

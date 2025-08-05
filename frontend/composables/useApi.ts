@@ -22,11 +22,35 @@ interface GetOptions {
   headers?: Record<string, string>;
 }
 
-interface StandardError {
-  status: number;
-  data: unknown;
-  message: string;
-  originalError: unknown;
+// Proper error class hierarchy
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+    public data?: unknown,
+    public originalError?: unknown
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+class ValidationError extends ApiError {
+  constructor(
+    message: string,
+    public errors: Record<string, string[]>,
+    data?: unknown
+  ) {
+    super(422, message, data);
+    this.name = "ValidationError";
+  }
+}
+
+class NetworkError extends ApiError {
+  constructor(message: string = "Network error occurred") {
+    super(0, message);
+    this.name = "NetworkError";
+  }
 }
 
 // API endpoints for better type safety and maintainability
@@ -88,11 +112,21 @@ export const useApi = () => {
     return headers;
   };
 
+  // Logger instance for API operations
+  const logger = {
+    debug: (message: string, ...args: any[]) =>
+      console.debug(`[API] ${message}`, ...args),
+    error: (message: string, ...args: any[]) =>
+      console.error(`[API] ${message}`, ...args),
+    warn: (message: string, ...args: any[]) =>
+      console.warn(`[API] ${message}`, ...args),
+  };
+
   /**
    * Request interceptor for logging and transformation
    */
   const onRequest = (endpoint: string, options: any) => {
-    console.log(`[API] ${options.method || "GET"} ${endpoint}`);
+    logger.debug(`${options.method || "GET"} ${endpoint}`);
     options._startTime = Date.now();
     return options;
   };
@@ -102,81 +136,88 @@ export const useApi = () => {
    */
   const onResponse = <T>(endpoint: string, options: any, response: T): T => {
     const duration = Date.now() - (options._startTime || 0);
-    console.log(`[API] ${options.method || "GET"} ${endpoint} - ${duration}ms`);
+    logger.debug(`${options.method || "GET"} ${endpoint} - ${duration}ms`);
     return response;
   };
 
   /**
-   * Handle API errors consistently with proper error transformation
+   * Clear user session safely
+   */
+  const clearUserSession = async (): Promise<void> => {
+    try {
+      const { clear } = useUserSession();
+      clear();
+    } catch (sessionError) {
+      console.warn("Failed to clear user session:", sessionError);
+    }
+  };
+
+  /**
+   * Get appropriate error message for status code
+   */
+  const getErrorMessage = (status: number): string => {
+    switch (status) {
+      case HTTP_STATUS.BAD_REQUEST:
+        return "Bad request. Please check your input.";
+      case HTTP_STATUS.UNAUTHORIZED:
+        return "Authentication required. Please log in again.";
+      case HTTP_STATUS.FORBIDDEN:
+        return "You are not authorized to perform this action.";
+      case HTTP_STATUS.NOT_FOUND:
+        return "The requested resource was not found.";
+      case HTTP_STATUS.TOO_MANY_REQUESTS:
+        return "Too many requests. Please try again later.";
+      case 0:
+        return "Network error. Please check your connection and try again.";
+      default:
+        if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) {
+          return "An internal server error occurred. Please try again later.";
+        }
+        return "An unexpected error occurred.";
+    }
+  };
+
+  /**
+   * Handle API errors with proper error classes
    */
   const handleApiError = async (
     error: unknown,
     method: string
   ): Promise<never> => {
-    console.error(`API ${method} Error:`, error);
+    logger.error(`${method} Error:`, error);
 
-    // Create a standardized error object
-    const standardError: StandardError = {
-      status: (error as any)?.status || (error as any)?.statusCode || 0,
-      data: (error as any)?.data || (error as any)?.response?.data || null,
-      message:
-        (error as any)?.message ||
-        (error as any)?.statusMessage ||
-        "Unknown error occurred",
-      originalError: error,
-    };
+    const status = (error as any)?.status || (error as any)?.statusCode || 0;
+    const data = (error as any)?.data || (error as any)?.response?.data || null;
+    const message = (error as any)?.message || (error as any)?.statusMessage;
 
-    // Handle specific error types with consistent messaging
-    switch (standardError.status) {
-      case HTTP_STATUS.UNAUTHORIZED:
-        // Clear session but let the caller handle navigation
-        try {
-          const { clear } = useUserSession();
-          clear();
-        } catch (sessionError) {
-          console.warn("Failed to clear user session:", sessionError);
-        }
-        throw {
-          ...standardError,
-          message: "Authentication required. Please log in again.",
-          shouldRedirect: "/login",
-        };
-
-      case HTTP_STATUS.FORBIDDEN:
-        throw {
-          ...standardError,
-          message: "You are not authorized to perform this action",
-        };
-
+    // Handle specific error types with proper classes
+    switch (status) {
       case HTTP_STATUS.UNPROCESSABLE_ENTITY:
-        // Validation error - preserve original structure for form handling
-        throw {
-          ...standardError,
-          message: (standardError.data as any)?.message || "Validation failed",
-        };
+        throw new ValidationError(
+          data?.message || "Validation failed",
+          data?.errors || {},
+          data
+        );
 
-      case HTTP_STATUS.TOO_MANY_REQUESTS:
-        throw {
-          ...standardError,
-          message: "Too many requests. Please try again later.",
-        };
+      case HTTP_STATUS.UNAUTHORIZED:
+        await clearUserSession();
+        throw new ApiError(
+          status,
+          "Authentication required. Please log in again.",
+          data,
+          error
+        );
 
       case 0:
-        // Network error
-        throw {
-          ...standardError,
-          message: "Network error. Please check your connection and try again.",
-        };
+        throw new NetworkError();
 
       default:
-        if (standardError.status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) {
-          throw {
-            ...standardError,
-            message:
-              "An internal server error occurred. Please try again later.",
-          };
-        }
-        throw standardError;
+        throw new ApiError(
+          status,
+          message || getErrorMessage(status),
+          data,
+          error
+        );
     }
   };
 
@@ -216,7 +257,7 @@ export const useApi = () => {
       // Apply response interceptor
       return onResponse(validatedEndpoint, requestOptions, response);
     } catch (error) {
-      return handleApiError(error, method);
+      return await handleApiError(error, method);
     }
   };
 
@@ -231,11 +272,14 @@ export const useApi = () => {
 
     if (cache) {
       const { cachedRequest } = useApiCache();
-      return cachedRequest<T>(endpoint, {
-        ttl,
-        force,
-        fetcher: (url: string) => request<T>(url, { headers }),
-      });
+      return cachedRequest<T>(
+        endpoint,
+        () => request<T>(endpoint, { headers }),
+        {
+          ttl,
+          force,
+        }
+      );
     }
 
     return request<T>(endpoint, { headers });

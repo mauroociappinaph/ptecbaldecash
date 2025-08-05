@@ -21,6 +21,15 @@ import { useToast } from "~/composables/useToast";
 const toastContainer = ref();
 
 onMounted(() => {
+  // Initialize performance monitoring
+  const { monitorPageLoad, logMemoryUsage } = usePerformance();
+  monitorPageLoad();
+
+  // Log initial memory usage
+  if (process.dev) {
+    logMemoryUsage("App mounted");
+  }
+
   // Initialize toast system
   if (toastContainer.value) {
     const { setToastContainer } = useToast();

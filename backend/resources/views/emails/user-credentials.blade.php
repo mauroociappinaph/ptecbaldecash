@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="format-detection" content="telephone=no">
     <title>Welcome to User Management System</title>
     <style>
         body {
@@ -87,11 +89,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Bienvenido a User Management System</h1>
+            <h1>Welcome to User Management System</h1>
         </div>
 
         <div class="content">
-            <p>Hello <strong>{{ $user->name }} {{ $user->last_name }}</strong>,</p>
+            <p>Hello <strong>{!! $user->name !!} {!! $user->last_name !!}</strong>,</p>
 
             <p>Your account has been successfully created in the User Management System. Below are your login credentials:</p>
 

@@ -105,20 +105,19 @@ class ErrorHandlingTest extends TestCase
                 'name' => 'Test User',
                 'last_name' => 'Test Last Name',
                 'email' => 'existing@example.com',
-                'password' => 'password123',
+                'password' => 'UniqueErrorTestPass123!', // Fixed password to meet validation requirements
+                'password_confirmation' => 'UniqueErrorTestPass123!', // Added required confirmation
                 'role' => 'reviewer'
             ]);
 
-        $response->assertStatus(409)
+        // Duplicate email validation happens at the request validation level (422)
+        // not at the business logic level (409)
+        $response->assertStatus(422)
             ->assertJsonStructure([
-                'success',
                 'message',
-                'error_code'
+                'errors'
             ])
-            ->assertJson([
-                'success' => false,
-                'error_code' => 'EMAIL_ALREADY_EXISTS'
-            ]);
+            ->assertJsonPath('errors.email.0', 'This email address is already registered.');
     }
 
     public function test_self_deletion_returns_proper_error(): void

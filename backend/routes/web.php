@@ -15,3 +15,4 @@ Route::get('/csrf-token', function () {
 
 // Sanctum CSRF cookie endpoint (already handled by Sanctum)
 // This is automatically available at /sanctum/csrf-cookie
+

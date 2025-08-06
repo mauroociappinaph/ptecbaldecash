@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import type {
     ApiComposable,
     AuthComposable,
@@ -63,13 +63,73 @@ export const createMockAuth = (overrides: Partial<AuthComposable> = {}): AuthCom
     refreshSession: vi.fn().mockResolvedValue(undefined),
     clearError: vi.fn(),
     hasRole: vi.fn().mockReturnValue(false),
-    isAdministrator: computed(() => false),
-    isReviewer: computed(() => false),
-    canManageUsers: computed(() => false),
-    isReadOnly: computed(() => false),
+    isAdministrator: vi.fn().mockReturnValue(false),
+    isReviewer: vi.fn().mockReturnValue(false),
+    canManageUsers: vi.fn().mockReturnValue(false),
+    isReadOnly: vi.fn().mockReturnValue(true),
     getCurrentUser: vi.fn().mockReturnValue(null),
     ...overrides,
 });
+
+/**
+ * Creates a mock authentication composable for administrator role testing
+ * @param overrides - Additional overrides for specific test scenarios
+ * @returns Mock auth composable configured for administrator role
+ */
+export const createMockAdminAuth = (overrides: Partial<AuthComposable> = {}): AuthComposable => {
+    const adminUser = {
+        id: 1,
+        name: "Admin",
+        last_name: "User",
+        email: "admin@example.com",
+        role: "administrator" as const,
+        full_name: "Admin User",
+        created_at: "2024-01-01T00:00:00.000Z",
+        updated_at: "2024-01-01T00:00:00.000Z",
+    };
+
+    return createMockAuth({
+        user: ref(adminUser),
+        loggedIn: ref(true),
+        hasRole: vi.fn((role: string) => role === "administrator"),
+        isAdministrator: vi.fn().mockReturnValue(true),
+        isReviewer: vi.fn().mockReturnValue(false),
+        canManageUsers: vi.fn().mockReturnValue(true),
+        isReadOnly: vi.fn().mockReturnValue(false),
+        getCurrentUser: vi.fn().mockReturnValue(adminUser),
+        ...overrides,
+    });
+};
+
+/**
+ * Creates a mock authentication composable for reviewer role testing
+ * @param overrides - Additional overrides for specific test scenarios
+ * @returns Mock auth composable configured for reviewer role
+ */
+export const createMockReviewerAuth = (overrides: Partial<AuthComposable> = {}): AuthComposable => {
+    const reviewerUser = {
+        id: 2,
+        name: "Reviewer",
+        last_name: "User",
+        email: "reviewer@example.com",
+        role: "reviewer" as const,
+        full_name: "Reviewer User",
+        created_at: "2024-01-01T00:00:00.000Z",
+        updated_at: "2024-01-01T00:00:00.000Z",
+    };
+
+    return createMockAuth({
+        user: ref(reviewerUser),
+        loggedIn: ref(true),
+        hasRole: vi.fn((role: string) => role === "reviewer"),
+        isAdministrator: vi.fn().mockReturnValue(false),
+        isReviewer: vi.fn().mockReturnValue(true),
+        canManageUsers: vi.fn().mockReturnValue(false),
+        isReadOnly: vi.fn().mockReturnValue(true),
+        getCurrentUser: vi.fn().mockReturnValue(reviewerUser),
+        ...overrides,
+    });
+};
 
 /**
  * Creates a mock API composable for testing
@@ -137,34 +197,20 @@ export const createMockFormErrorHandler = (
  * This function sets up all necessary composable mocks that are auto-imported in Nuxt
  */
 export const assignGlobalMocks = () => {
+    const mockDefinitions = {
+        useAuth: createMockAuth,
+        useApi: createMockApi,
+        useToast: createMockToast,
+        useFormErrorHandler: createMockFormErrorHandler,
+        usePerformance: createMockPerformance,
+    };
+
     // Use Object.defineProperty to avoid TypeScript errors and ensure proper mock behavior
-    Object.defineProperty(globalThis, 'useAuth', {
-        value: vi.fn(() => createMockAuth()),
-        writable: true,
-        configurable: true,
-    });
-
-    Object.defineProperty(globalThis, 'useApi', {
-        value: vi.fn(() => createMockApi()),
-        writable: true,
-        configurable: true,
-    });
-
-    Object.defineProperty(globalThis, 'useToast', {
-        value: vi.fn(() => createMockToast()),
-        writable: true,
-        configurable: true,
-    });
-
-    Object.defineProperty(globalThis, 'useFormErrorHandler', {
-        value: vi.fn(() => createMockFormErrorHandler()),
-        writable: true,
-        configurable: true,
-    });
-
-    Object.defineProperty(globalThis, 'usePerformance', {
-        value: vi.fn(() => createMockPerformance()),
-        writable: true,
-        configurable: true,
+    Object.entries(mockDefinitions).forEach(([name, factory]) => {
+        Object.defineProperty(globalThis, name, {
+            value: vi.fn(() => factory()),
+            writable: true,
+            configurable: true,
+        });
     });
 };

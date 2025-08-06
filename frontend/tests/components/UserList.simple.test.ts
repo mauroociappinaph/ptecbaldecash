@@ -1,14 +1,13 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
 import UserList from "../../components/Users/UserList.vue";
 import { mockUsers } from "../test-utils";
 
 // Mock all the composables that UserList needs
 vi.mock("~/composables/useAuth", () => ({
   useAuth: () => ({
-    canManageUsers: ref(true),
+    canManageUsers: vi.fn().mockReturnValue(true),
   }),
 }));
 

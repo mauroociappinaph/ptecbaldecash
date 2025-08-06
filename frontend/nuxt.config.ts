@@ -46,17 +46,20 @@ export default defineNuxtConfig({
   // Add required modules
   modules: [
     "@pinia/nuxt",
-    "@nuxtjs/tailwindcss": {
-      postcss: {
-        plugins: {
-          "@tailwindcss/postcss": {},
-          autoprefixer: {},
-        },
-      },
-    },
+    "@nuxtjs/tailwindcss",
     "@vueuse/nuxt",
     "nuxt-auth-utils",
   ],
+
+  // Tailwind CSS configuration
+  tailwindcss: {
+    postcss: {
+      plugins: {
+        "@tailwindcss/postcss": {},
+        autoprefixer: {},
+      },
+    },
+  },
 
   // Vite configuration optimized for development and production
   vite: {

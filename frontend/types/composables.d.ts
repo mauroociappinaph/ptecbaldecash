@@ -1,4 +1,4 @@
-import type { ComputedRef, Ref } from 'vue';
+import type { Ref } from 'vue';
 
 // Shared type definitions for composables
 export interface AuthComposable {
@@ -11,10 +11,10 @@ export interface AuthComposable {
   refreshSession: () => Promise<void>;
   clearError: () => void;
   hasRole: (role: UserRole) => boolean;
-  isAdministrator: ComputedRef<boolean>;
-  isReviewer: ComputedRef<boolean>;
-  canManageUsers: ComputedRef<boolean>;
-  isReadOnly: ComputedRef<boolean>;
+  isAdministrator: () => boolean;
+  isReviewer: () => boolean;
+  canManageUsers: () => boolean;
+  isReadOnly: () => boolean;
   getCurrentUser: () => User | null;
 }
 

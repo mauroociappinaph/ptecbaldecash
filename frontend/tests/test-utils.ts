@@ -2,7 +2,7 @@
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia } from "pinia";
 import { vi } from "vitest";
-import { computed, ref, type Component } from "vue";
+import { ref, type Component } from "vue";
 import type { User, UserRole } from "../types/index";
 
 // Import shared types and factories for consistency
@@ -92,46 +92,29 @@ export const createMockFetch = (response: any, status = 200) => {
   });
 };
 
-// Helper to create mock router with better type safety
-export const createMockRouter = (initialRoute = "/") => ({
-  push: vi.fn().mockResolvedValue(undefined),
-  replace: vi.fn().mockResolvedValue(undefined),
-  go: vi.fn(),
-  back: vi.fn(),
-  forward: vi.fn(),
-  getRoutes: vi.fn().mockReturnValue([]),
-  hasRoute: vi.fn().mockReturnValue(true),
-  resolve: vi.fn().mockReturnValue({ href: initialRoute }),
-  currentRoute: {
-    value: {
-      path: initialRoute,
-      name: initialRoute === "/" ? "index" : initialRoute.slice(1),
-      params: {},
-      query: {},
-      hash: "",
-      fullPath: initialRoute,
-      matched: [],
-      meta: {},
-      redirectedFrom: undefined,
-    },
-  },
-});
+// Import shared mock factories from setup
+import { createMockRoute, createMockRouter } from './setup';
 
-// Helper to create mock auth composable
+/**
+ * Creates a mock authentication composable for testing
+ * @param user - Mock user data (null for unauthenticated state)
+ * @param loggedIn - Whether the user should appear logged in
+ * @returns Mock auth composable with all required methods and state
+ */
 export const createMockAuth = (user: any = null, loggedIn = false) => ({
   user: ref(user),
   loggedIn: ref(loggedIn),
   isLoading: ref(false),
   error: ref(null),
-  login: vi.fn(),
-  logout: vi.fn(),
-  refreshSession: vi.fn(),
+  login: vi.fn().mockResolvedValue(undefined),
+  logout: vi.fn().mockResolvedValue(undefined),
+  refreshSession: vi.fn().mockResolvedValue(undefined),
   clearError: vi.fn(),
   hasRole: vi.fn((role: string) => user?.role === role),
-  isAdministrator: computed(() => user?.role === "administrator"),
-  isReviewer: computed(() => user?.role === "reviewer"),
-  canManageUsers: computed(() => user?.role === "administrator"),
-  isReadOnly: computed(() => user?.role === "reviewer"),
+  isAdministrator: vi.fn(() => user?.role === "administrator"),
+  isReviewer: vi.fn(() => user?.role === "reviewer"),
+  canManageUsers: vi.fn(() => user?.role === "administrator"),
+  isReadOnly: vi.fn(() => user?.role === "reviewer"),
   getCurrentUser: vi.fn(() => user),
 });
 
@@ -148,12 +131,7 @@ export const createTestWrapper = <T extends Component>(
       mocks: {
         $t: (key: string) => key,
         $router: createMockRouter(),
-        $route: {
-          path: "/",
-          name: "index",
-          params: {},
-          query: {},
-        },
+        $route: createMockRoute(),
       },
       stubs: {
         // Stub Nuxt components that might cause issues in tests
@@ -181,7 +159,54 @@ export const waitForNextTick = async (): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 0));
 };
 
-// Enhanced async helper with timeout support
+/**
+ * Creates a mock API composable for testing
+ * @param overrides - Partial overrides for specific test scenarios
+ * @returns Mock API composable with all HTTP methods and endpoints
+ */
+export const createMockApi = (overrides: any = {}) => ({
+  get: vi.fn().mockResolvedValue({}),
+  post: vi.fn().mockResolvedValue({}),
+  put: vi.fn().mockResolvedValue({}),
+  del: vi.fn().mockResolvedValue({}),
+  testConnection: vi.fn().mockResolvedValue({ status: 'ok', timestamp: new Date().toISOString() }),
+  apiBase: 'http://localhost:8000/api',
+  API_ENDPOINTS: {
+    AUTH: {
+      LOGIN: '/auth/login',
+      LOGOUT: '/auth/logout',
+    },
+    USERS: {
+      LIST: '/users',
+      CREATE: '/users',
+      UPDATE: (id: number) => `/users/${id}`,
+      DELETE: (id: number) => `/users/${id}`,
+    },
+    HEALTH: '/health',
+  },
+  ...overrides,
+});
+
+/**
+ * Creates a mock toast composable for testing
+ * @param overrides - Partial overrides for specific test scenarios
+ * @returns Mock toast composable with notification methods
+ */
+export const createMockToast = (overrides: any = {}) => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  warning: vi.fn(),
+  info: vi.fn(),
+  ...overrides,
+});
+
+/**
+ * Enhanced async helper with timeout support
+ * @param condition - Function that returns true when condition is met
+ * @param timeout - Maximum time to wait in milliseconds (default: 1000)
+ * @param interval - Check interval in milliseconds (default: 10)
+ * @throws Error if condition is not met within timeout
+ */
 export const waitForCondition = async (
   condition: () => boolean,
   timeout = 1000,

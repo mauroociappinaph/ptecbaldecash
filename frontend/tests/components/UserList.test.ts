@@ -14,7 +14,7 @@ describe("UserList", () => {
     // Create fresh mock for each test
     mockAuth = {
       user: ref(mockUsers.administrator),
-      canManageUsers: ref(true),
+      canManageUsers: vi.fn(() => true),
       isAdministrator: vi.fn(() => true),
       isReviewer: vi.fn(() => false),
     };

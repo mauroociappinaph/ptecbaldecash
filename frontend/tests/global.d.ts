@@ -1,8 +1,8 @@
 
 import type {
-    ComputedRef,
-    Ref,
-    WatchStopHandle
+  ComputedRef,
+  Ref,
+  WatchStopHandle
 } from 'vue';
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router';
 
@@ -17,10 +17,10 @@ interface AuthComposable {
   refreshSession: () => Promise<void>;
   clearError: () => void;
   hasRole: (role: string) => boolean;
-  isAdministrator: ComputedRef<boolean>;
-  isReviewer: ComputedRef<boolean>;
-  canManageUsers: ComputedRef<boolean>;
-  isReadOnly: ComputedRef<boolean>;
+  isAdministrator: () => boolean;
+  isReviewer: () => boolean;
+  canManageUsers: () => boolean;
+  isReadOnly: () => boolean;
   getCurrentUser: () => any;
 }
 

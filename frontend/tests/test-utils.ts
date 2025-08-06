@@ -2,7 +2,7 @@
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia } from "pinia";
 import { vi } from "vitest";
-import { ref, type Component } from "vue";
+import { computed, ref, type Component } from "vue";
 import type { User, UserRole } from "../types/index";
 
 // Import shared types and factories for consistency
@@ -111,8 +111,8 @@ export const createMockAuth = (user: any = null, loggedIn = false) => ({
   refreshSession: vi.fn().mockResolvedValue(undefined),
   clearError: vi.fn(),
   hasRole: vi.fn((role: string) => user?.role === role),
-  isAdministrator: vi.fn(() => user?.role === "administrator"),
-  isReviewer: vi.fn(() => user?.role === "reviewer"),
+  isAdministrator: computed(() => user?.role === "administrator"),
+  isReviewer: computed(() => user?.role === "reviewer"),
   canManageUsers: vi.fn(() => user?.role === "administrator"),
   isReadOnly: vi.fn(() => user?.role === "reviewer"),
   getCurrentUser: vi.fn(() => user),

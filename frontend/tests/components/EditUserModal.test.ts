@@ -16,6 +16,19 @@ const getFormElements = (wrapper: any) => ({
   modalTitle: wrapper.find('[id="modal-title"]'),
 });
 
+// Type-safe form value validators
+const expectFormValues = (elements: ReturnType<typeof getFormElements>, expectedValues: {
+  name: string;
+  lastName: string;
+  email: string;
+  role: string;
+}) => {
+  expect((elements.nameInput.element as HTMLInputElement).value).toBe(expectedValues.name);
+  expect((elements.lastNameInput.element as HTMLInputElement).value).toBe(expectedValues.lastName);
+  expect((elements.emailInput.element as HTMLInputElement).value).toBe(expectedValues.email);
+  expect((elements.roleSelect.element as HTMLSelectElement).value).toBe(expectedValues.role);
+};
+
 // Mock the composables and stores
 vi.mock("../../composables/useApi", () => ({
   useApi: () => ({
@@ -23,11 +36,15 @@ vi.mock("../../composables/useApi", () => ({
   }),
 }));
 
+const mockUseUsersStore = vi.fn();
 vi.mock("../../stores/users", () => ({
-  useUsersStore: () => ({
-    updateUser: vi.fn(),
-  }),
+  useUsersStore: mockUseUsersStore,
 }));
+
+// Default mock implementation
+mockUseUsersStore.mockReturnValue({
+  updateUser: vi.fn().mockResolvedValue(mockUsers.administrator),
+});
 
 describe("EditUserModal", () => {
   beforeEach(() => {
@@ -42,19 +59,15 @@ describe("EditUserModal", () => {
       },
     });
 
-    expect(wrapper.find('[id="modal-title"]').text()).toBe("Edit User");
-    expect(
-      (wrapper.find('input[id="edit-name"]').element as HTMLInputElement).value
-    ).toBe("Admin");
-    expect(
-      (wrapper.find('input[id="edit-last-name"]').element as HTMLInputElement).value
-    ).toBe("User");
-    expect(
-      (wrapper.find('input[id="edit-email"]').element as HTMLInputElement).value
-    ).toBe("admin@example.com");
-    expect(
-      (wrapper.find('select[id="edit-role"]').element as HTMLSelectElement).value
-    ).toBe("administrator");
+    const elements = getFormElements(wrapper);
+
+    expect(elements.modalTitle.text()).toBe("Edit User");
+    expectFormValues(elements, {
+      name: "Admin",
+      lastName: "User",
+      email: "admin@example.com",
+      role: "administrator"
+    });
   });
 
   it("does not render when closed", () => {
@@ -137,14 +150,73 @@ describe("EditUserModal", () => {
       },
     });
 
-    const nameInput = wrapper.find('input[id="edit-name"]');
-    const lastNameInput = wrapper.find('input[id="edit-last-name"]');
-    const emailInput = wrapper.find('input[id="edit-email"]');
-    const roleSelect = wrapper.find('select[id="edit-role"]');
+    const elements = getFormElements(wrapper);
 
-    expect(nameInput.attributes("required")).toBeDefined();
-    expect(lastNameInput.attributes("required")).toBeDefined();
-    expect(emailInput.attributes("required")).toBeDefined();
-    expect(roleSelect.attributes("required")).toBeDefined();
+    expect(elements.nameInput.attributes("required")).toBeDefined();
+    expect(elements.lastNameInput.attributes("required")).toBeDefined();
+    expect(elements.emailInput.attributes("required")).toBeDefined();
+    expect(elements.roleSelect.attributes("required")).toBeDefined();
+
+    // Password should not be required for editing
+    expect(elements.passwordInput.attributes("required")).toBeUndefined();
+  });
+
+  it("handles form submission with loading state", async () => {
+    const mockUpdateUser = vi.fn().mockImplementation(() =>
+      new Promise(resolve => setTimeout(resolve, 100))
+    );
+
+    vi.mocked(useUsersStore).mockReturnValue({
+      updateUser: mockUpdateUser,
+    } as any);
+
+    const wrapper = mount(EditUserModal, {
+      props: {
+        isOpen: true,
+        user: mockUsers.administrator,
+      },
+    });
+
+    const elements = getFormElements(wrapper);
+
+    // Trigger form submission
+    await elements.submitButton.trigger("click");
+
+    // Check loading state
+    expect(elements.submitButton.text()).toContain("Updating...");
+    expect(elements.submitButton.attributes("disabled")).toBeDefined();
+  });
+
+  it("handles validation errors from API", async () => {
+    const mockUpdateUser = vi.fn().mockRejectedValue({
+      status: 422,
+      data: {
+        errors: {
+          email: ["The email has already been taken."],
+          name: ["The name field is required."]
+        }
+      }
+    });
+
+    vi.mocked(useUsersStore).mockReturnValue({
+      updateUser: mockUpdateUser,
+    } as any);
+
+    const wrapper = mount(EditUserModal, {
+      props: {
+        isOpen: true,
+        user: mockUsers.administrator,
+      },
+    });
+
+    const elements = getFormElements(wrapper);
+
+    // Trigger form submission
+    await elements.submitButton.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // Check error display
+    expect(wrapper.text()).toContain("The email has already been taken.");
+    expect(wrapper.text()).toContain("The name field is required.");
   });
 });

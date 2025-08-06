@@ -170,7 +170,7 @@ vi.mock("nuxt-auth-utils", async () => {
 
 // Mock useAuth composable globally
 vi.mock("~/composables/useAuth", () => {
-  const { ref, computed } = require("vue");
+  const { ref } = require("vue");
   return {
     useAuth: vi.fn(() => ({
       user: ref(null),

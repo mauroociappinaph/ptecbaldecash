@@ -4,6 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import EditUserModal from "../../components/Users/EditUserModal.vue";
 import { mockUsers } from "../test-utils";
 
+// Test utilities for better element selection
+const getFormElements = (wrapper: any) => ({
+  nameInput: wrapper.find('input[id="edit-name"]'),
+  lastNameInput: wrapper.find('input[id="edit-last-name"]'),
+  emailInput: wrapper.find('input[id="edit-email"]'),
+  passwordInput: wrapper.find('input[id="edit-password"]'),
+  roleSelect: wrapper.find('select[id="edit-role"]'),
+  submitButton: wrapper.find('button[type="submit"]'),
+  cancelButton: wrapper.find('button[type="button"]'),
+  modalTitle: wrapper.find('[id="modal-title"]'),
+});
+
 // Mock the composables and stores
 vi.mock("../../composables/useApi", () => ({
   useApi: () => ({
@@ -32,16 +44,16 @@ describe("EditUserModal", () => {
 
     expect(wrapper.find('[id="modal-title"]').text()).toBe("Edit User");
     expect(
-      (wrapper.find('input[id="name"]').element as HTMLInputElement).value
+      (wrapper.find('input[id="edit-name"]').element as HTMLInputElement).value
     ).toBe("Admin");
     expect(
-      (wrapper.find('input[id="last_name"]').element as HTMLInputElement).value
+      (wrapper.find('input[id="edit-last-name"]').element as HTMLInputElement).value
     ).toBe("User");
     expect(
-      (wrapper.find('input[id="email"]').element as HTMLInputElement).value
+      (wrapper.find('input[id="edit-email"]').element as HTMLInputElement).value
     ).toBe("admin@example.com");
     expect(
-      (wrapper.find('select[id="role"]').element as HTMLSelectElement).value
+      (wrapper.find('select[id="edit-role"]').element as HTMLSelectElement).value
     ).toBe("administrator");
   });
 
@@ -64,10 +76,10 @@ describe("EditUserModal", () => {
       },
     });
 
-    const nameInput = wrapper.find('input[id="name"]');
-    const lastNameInput = wrapper.find('input[id="last_name"]');
-    const emailInput = wrapper.find('input[id="email"]');
-    const roleSelect = wrapper.find('select[id="role"]');
+    const nameInput = wrapper.find('input[id="edit-name"]');
+    const lastNameInput = wrapper.find('input[id="edit-last-name"]');
+    const emailInput = wrapper.find('input[id="edit-email"]');
+    const roleSelect = wrapper.find('select[id="edit-role"]');
 
     expect((nameInput.element as HTMLInputElement).value).toBe("Reviewer");
     expect((lastNameInput.element as HTMLInputElement).value).toBe("User");
@@ -97,7 +109,7 @@ describe("EditUserModal", () => {
       },
     });
 
-    const passwordInput = wrapper.find('input[id="password"]');
+    const passwordInput = wrapper.find('input[id="edit-password"]');
     expect(passwordInput.exists()).toBe(true);
     expect(passwordInput.attributes("required")).toBeUndefined();
     expect((passwordInput.element as HTMLInputElement).value).toBe("");
@@ -111,7 +123,7 @@ describe("EditUserModal", () => {
       },
     });
 
-    const nameInput = wrapper.find('input[id="name"]');
+    const nameInput = wrapper.find('input[id="edit-name"]');
     await nameInput.setValue("Updated Name");
 
     expect((nameInput.element as HTMLInputElement).value).toBe("Updated Name");
@@ -125,10 +137,10 @@ describe("EditUserModal", () => {
       },
     });
 
-    const nameInput = wrapper.find('input[id="name"]');
-    const lastNameInput = wrapper.find('input[id="last_name"]');
-    const emailInput = wrapper.find('input[id="email"]');
-    const roleSelect = wrapper.find('select[id="role"]');
+    const nameInput = wrapper.find('input[id="edit-name"]');
+    const lastNameInput = wrapper.find('input[id="edit-last-name"]');
+    const emailInput = wrapper.find('input[id="edit-email"]');
+    const roleSelect = wrapper.find('select[id="edit-role"]');
 
     expect(nameInput.attributes("required")).toBeDefined();
     expect(lastNameInput.attributes("required")).toBeDefined();

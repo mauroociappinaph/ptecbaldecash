@@ -89,17 +89,14 @@ describe("EditUserModal", () => {
       },
     });
 
-    const nameInput = wrapper.find('input[id="edit-name"]');
-    const lastNameInput = wrapper.find('input[id="edit-last-name"]');
-    const emailInput = wrapper.find('input[id="edit-email"]');
-    const roleSelect = wrapper.find('select[id="edit-role"]');
+    const elements = getFormElements(wrapper);
 
-    expect((nameInput.element as HTMLInputElement).value).toBe("Reviewer");
-    expect((lastNameInput.element as HTMLInputElement).value).toBe("User");
-    expect((emailInput.element as HTMLInputElement).value).toBe(
-      "reviewer@example.com"
-    );
-    expect((roleSelect.element as HTMLSelectElement).value).toBe("reviewer");
+    expectFormValues(elements, {
+      name: "Reviewer",
+      lastName: "User",
+      email: "reviewer@example.com",
+      role: "reviewer"
+    });
   });
 
   it("emits close event when cancel button is clicked", async () => {
@@ -136,10 +133,10 @@ describe("EditUserModal", () => {
       },
     });
 
-    const nameInput = wrapper.find('input[id="edit-name"]');
-    await nameInput.setValue("Updated Name");
+    const elements = getFormElements(wrapper);
+    await elements.nameInput.setValue("Updated Name");
 
-    expect((nameInput.element as HTMLInputElement).value).toBe("Updated Name");
+    expect((elements.nameInput.element as HTMLInputElement).value).toBe("Updated Name");
   });
 
   it("validates required fields", () => {
@@ -166,9 +163,9 @@ describe("EditUserModal", () => {
       new Promise(resolve => setTimeout(resolve, 100))
     );
 
-    vi.mocked(useUsersStore).mockReturnValue({
+    mockUseUsersStore.mockReturnValue({
       updateUser: mockUpdateUser,
-    } as any);
+    });
 
     const wrapper = mount(EditUserModal, {
       props: {
@@ -198,9 +195,9 @@ describe("EditUserModal", () => {
       }
     });
 
-    vi.mocked(useUsersStore).mockReturnValue({
+    mockUseUsersStore.mockReturnValue({
       updateUser: mockUpdateUser,
-    } as any);
+    });
 
     const wrapper = mount(EditUserModal, {
       props: {
